@@ -84,6 +84,11 @@ function initSchema(db: Database.Database) {
   addColumnIfMissing(db, 'companies', 'aisignal_plan', "TEXT NOT NULL DEFAULT 'free'");
   addColumnIfMissing(db, 'companies', 'trial_ends_at', 'TEXT');
   addColumnIfMissing(db, 'companies', 'upsell_count', 'INTEGER NOT NULL DEFAULT 0');
+  // Stripe billing columns
+  addColumnIfMissing(db, 'companies', 'stripe_customer_id', 'TEXT');
+  addColumnIfMissing(db, 'companies', 'stripe_subscription_id', 'TEXT');
+  addColumnIfMissing(db, 'companies', 'stripe_subscription_status', 'TEXT');
+  addColumnIfMissing(db, 'companies', 'stripe_price_id', 'TEXT');
 }
 
 export interface Company {
@@ -101,6 +106,10 @@ export interface Company {
   aisignal_plan: 'free' | 'premium';
   trial_ends_at: string | null;
   upsell_count: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_subscription_status: string | null;
+  stripe_price_id: string | null;
 }
 
 export interface MonitoringRun {
@@ -287,10 +296,114 @@ export function getRunCount(companyId: string): number {
   return row.cnt;
 }
 
+export function updateCompany(
+  id: string,
+  fields: Partial<Pick<Company, 'name' | 'domain' | 'email' | 'category' | 'country' | 'competitors'>>
+): Company | null {
+  const db = getDb();
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  if (fields.name !== undefined) { sets.push('name = ?'); vals.push(fields.name); }
+  if (fields.domain !== undefined) { sets.push('domain = ?'); vals.push(fields.domain); }
+  if (fields.email !== undefined) { sets.push('email = ?'); vals.push(fields.email.toLowerCase().trim()); }
+  if (fields.category !== undefined) { sets.push('category = ?'); vals.push(fields.category); }
+  if (fields.country !== undefined) { sets.push('country = ?'); vals.push(fields.country); }
+  if (fields.competitors !== undefined) { sets.push('competitors = ?'); vals.push(JSON.stringify(fields.competitors)); }
+  if (sets.length === 0) return getCompany(id);
+  vals.push(id);
+  db.prepare(`UPDATE companies SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  return getCompany(id);
+}
+
+export function getExpiredTrialCompanies(): Company[] {
+  const now = new Date().toISOString();
+  const rows = getDb().prepare(`
+    SELECT * FROM companies
+    WHERE aisignal_plan = 'premium'
+    AND trial_ends_at IS NOT NULL
+    AND trial_ends_at <= ?
+  `).all(now) as Array<Record<string, unknown>>;
+  return rows.map((r) => ({
+    ...r,
+    competitors: JSON.parse(r.competitors as string),
+    products_purchased: JSON.parse((r.products_purchased as string) || '[]'),
+  } as Company));
+}
+
+export function expireTrialForCompany(companyId: string): void {
+  getDb().prepare(`
+    UPDATE companies
+    SET aisignal_plan = 'free',
+        trial_ends_at = NULL
+    WHERE id = ?
+  `).run(companyId);
+}
+
 export function getAllActiveCompanies(): Company[] {
   const rows = getDb().prepare(
     "SELECT * FROM companies WHERE status = 'active' ORDER BY created_at ASC"
   ).all() as Array<Record<string, unknown>>;
+  return rows.map((r) => ({
+    ...r,
+    competitors: JSON.parse(r.competitors as string),
+    products_purchased: JSON.parse((r.products_purchased as string) || '[]'),
+  } as Company));
+}
+
+export function updateStripeCustomer(companyId: string, stripeCustomerId: string): void {
+  getDb().prepare('UPDATE companies SET stripe_customer_id = ? WHERE id = ?').run(stripeCustomerId, companyId);
+}
+
+export function updateStripeSubscription(
+  companyId: string,
+  subscriptionId: string,
+  status: string,
+  priceId: string,
+  plan: 'free' | 'premium'
+): void {
+  getDb().prepare(`
+    UPDATE companies
+    SET stripe_subscription_id = ?,
+        stripe_subscription_status = ?,
+        stripe_price_id = ?,
+        aisignal_plan = ?,
+        trial_ends_at = NULL
+    WHERE id = ?
+  `).run(subscriptionId, status, priceId, plan, companyId);
+}
+
+export function cancelStripeSubscription(companyId: string): void {
+  getDb().prepare(`
+    UPDATE companies
+    SET aisignal_plan = 'free',
+        stripe_subscription_id = NULL,
+        stripe_subscription_status = 'canceled',
+        stripe_price_id = NULL
+    WHERE id = ?
+  `).run(companyId);
+}
+
+export function getCompanyByStripeCustomerId(stripeCustomerId: string): Company | null {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM companies WHERE stripe_customer_id = ?').get(stripeCustomerId) as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return {
+    ...row,
+    competitors: JSON.parse(row.competitors as string),
+    products_purchased: JSON.parse((row.products_purchased as string) || '[]'),
+  } as Company;
+}
+
+// Companies whose 90-day trial has expired and have no active Stripe subscription yet
+export function getCompaniesReadyForStripeActivation(): Company[] {
+  const now = new Date().toISOString();
+  const rows = getDb().prepare(`
+    SELECT * FROM companies
+    WHERE aisignal_plan = 'premium'
+    AND trial_ends_at IS NOT NULL
+    AND trial_ends_at <= ?
+    AND (stripe_subscription_id IS NULL OR stripe_subscription_status = 'trialing')
+  `).all(now) as Array<Record<string, unknown>>;
   return rows.map((r) => ({
     ...r,
     competitors: JSON.parse(r.competitors as string),
