@@ -7,14 +7,18 @@ import {
   createAlert,
   getResultsByRunId,
   getLastTwoRunIds,
+  getRunCount,
 } from './db';
-import { sendAlertEmail } from './email';
+import { sendWeeklyDigestEmail, sendFirstReportReadyEmail } from './email';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = 'gpt-4o-mini';
 
 const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
 const PERPLEXITY_MODEL = 'llama-3.1-sonar-small-128k-online';
+
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 // Map category to a relevant use case for category_solution prompt
 const CATEGORY_USE_CASES: Record<string, string> = {
@@ -105,6 +109,28 @@ async function callOpenAI(prompt: string): Promise<string> {
   return data.choices[0].message.content as string;
 }
 
+async function callGemini(prompt: string): Promise<string> {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 800, temperature: 0.3 },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text as string;
+}
+
 async function callPerplexity(prompt: string): Promise<string> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) throw new Error('PERPLEXITY_API_KEY not set');
@@ -140,6 +166,7 @@ interface ProviderConfig {
 
 const PROVIDERS: ProviderConfig[] = [
   { id: 'openai/gpt-4o-mini', call: callOpenAI, envKey: 'OPENAI_API_KEY' },
+  { id: 'google/gemini-1.5-flash', call: callGemini, envKey: 'GOOGLE_API_KEY' },
   { id: 'perplexity/sonar', call: callPerplexity, envKey: 'PERPLEXITY_API_KEY' },
 ];
 
@@ -210,12 +237,12 @@ function calcScore(mentioned: boolean, chosen: boolean, response: string, compan
 
 export async function runMonitoringForCompany(company: Company): Promise<string> {
   const runId = uuidv4();
-  createMonitoringRun(runId, company.id);
+  await createMonitoringRun(runId, company.id);
 
   const activeProviders = PROVIDERS.filter((p) => !!process.env[p.envKey]);
 
   if (activeProviders.length === 0) {
-    updateRunStatus(runId, 'failed');
+    await updateRunStatus(runId, 'failed');
     throw new Error('No AI provider API keys configured (OPENAI_API_KEY, PERPLEXITY_API_KEY)');
   }
 
@@ -237,7 +264,7 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
         const score = calcScore(mentioned, chosen, response, company);
         const sentiment = calcSentiment(response, company);
 
-        saveMonitoringResult({
+        await saveMonitoringResult({
           id: uuidv4(),
           run_id: runId,
           company_id: company.id,
@@ -253,10 +280,18 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
       }
     }
 
-    updateRunStatus(runId, 'done');
+    await updateRunStatus(runId, 'done');
+
+    const completedRuns = await getRunCount(company.id);
+    if (completedRuns === 1) {
+      sendFirstReportReadyEmail(company.email, company.name, company.id).catch((e) =>
+        console.error('First report email error:', e)
+      );
+    }
+
     await checkAndCreateAlerts(company, runId);
   } catch (err) {
-    updateRunStatus(runId, 'failed');
+    await updateRunStatus(runId, 'failed');
     throw err;
   }
 
@@ -264,23 +299,19 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
 }
 
 async function checkAndCreateAlerts(company: Company, currentRunId: string) {
-  const runIds = getLastTwoRunIds(company.id);
+  const runIds = await getLastTwoRunIds(company.id);
   if (runIds.length < 2) return; // Need at least 2 completed runs
 
   const [latestRunId, previousRunId] = runIds;
   // currentRunId should be the latest; skip if mismatch
   if (latestRunId !== currentRunId) return;
 
-  const currentResults = getResultsByRunId(currentRunId);
-  const previousResults = getResultsByRunId(previousRunId);
+  const currentResults = await getResultsByRunId(currentRunId);
+  const previousResults = await getResultsByRunId(previousRunId);
 
   if (currentResults.length === 0 || previousResults.length === 0) return;
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://aisignal.dk';
-  const dashboardUrl = `${baseUrl}/dashboard/${company.id}`;
-  const today = new Date().toISOString().split('T')[0];
-
-  const alertsToSend: { type: string; message: string; subject: string; body: string }[] = [];
+  const digestSignals: { headline: string; consequence: string }[] = [];
 
   // 1. valgt_fald: Valgt-score falls >10 pp
   const currentChosenRate = (currentResults.filter(r => r.chosen).length / currentResults.length) * 100;
@@ -288,10 +319,12 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
   const chosenDiff = currentChosenRate - previousChosenRate;
 
   if (chosenDiff <= -10) {
-    const msg = `Din Valgt-score er faldet med ${Math.abs(chosenDiff).toFixed(0)} procentpoint.`;
-    const body = buildAlertBody('valgt_fald', company.name, msg, previousChosenRate, currentChosenRate, today, dashboardUrl);
-    createAlert(uuidv4(), company.id, 'valgt_fald', msg);
-    alertsToSend.push({ type: 'valgt_fald', message: msg, subject: `Valgt-score faldet — ${company.name}`, body });
+    const msg = `Valgt-score faldet med ${Math.abs(chosenDiff).toFixed(0)} procentpoint (${previousChosenRate.toFixed(0)}% → ${currentChosenRate.toFixed(0)}%)`;
+    await createAlert(uuidv4(), company.id, 'valgt_fald', msg);
+    digestSignals.push({
+      headline: msg,
+      consequence: `Færre kunder vælger jer via AI. Det kan reducere antallet af uopfordrede henvendelser og forringer jeres synlighed i AI-drevne anbefalinger.`,
+    });
   }
 
   // 2. konkurrent_overtag: A competitor mention rate exceeds company mention rate
@@ -306,10 +339,12 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
       }
       const competitorRate = (competitorMentions / currentResults.length) * 100;
       if (competitorRate > companyMentionRate) {
-        const msg = `${competitor} nævnes nu oftere end ${company.name} i AI-svar (${competitorRate.toFixed(0)}% vs ${companyMentionRate.toFixed(0)}%).`;
-        const body = buildAlertBody('konkurrent_overtag', company.name, msg, companyMentionRate, competitorRate, today, dashboardUrl);
-        createAlert(uuidv4(), company.id, 'konkurrent_overtag', msg);
-        alertsToSend.push({ type: 'konkurrent_overtag', message: msg, subject: `Konkurrent overhaler — ${company.name}`, body });
+        const msg = `${competitor} nævnes nu oftere end ${company.name} i AI-svar (${competitorRate.toFixed(0)}% vs ${companyMentionRate.toFixed(0)}%)`;
+        await createAlert(uuidv4(), company.id, 'konkurrent_overtag', msg);
+        digestSignals.push({
+          headline: msg,
+          consequence: `En konkurrent dominerer nu AI-anbefalingerne i jeres kategori. Det betyder at AI aktivt sender kunder til dem frem for jer.`,
+        });
         break; // One alert per run is enough
       }
     }
@@ -321,10 +356,12 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
   const mentionDiff = currentMentionRate - previousMentionRate;
 
   if (mentionDiff <= -15) {
-    const msg = `Din Nævnt-score er faldet med ${Math.abs(mentionDiff).toFixed(0)} procentpoint.`;
-    const body = buildAlertBody('nævnt_fald', company.name, msg, previousMentionRate, currentMentionRate, today, dashboardUrl);
-    createAlert(uuidv4(), company.id, 'nævnt_fald', msg);
-    alertsToSend.push({ type: 'nævnt_fald', message: msg, subject: `Nævnt-score faldet — ${company.name}`, body });
+    const msg = `Nævnt-score faldet med ${Math.abs(mentionDiff).toFixed(0)} procentpoint (${previousMentionRate.toFixed(0)}% → ${currentMentionRate.toFixed(0)}%)`;
+    await createAlert(uuidv4(), company.id, 'nævnt_fald', msg);
+    digestSignals.push({
+      headline: msg,
+      consequence: `AI-systemer nævner jer sjældnere i relevante kategorier. Det øger risikoen for at potentielle kunder ikke opdager jer, når de søger løsninger via AI.`,
+    });
   }
 
   // 4. sentiment_aendring: Avg sentiment drops from positive (>0.3) to neutral/negative (<0.1)
@@ -332,14 +369,15 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
   const previousAvgSentiment = previousResults.reduce((s, r) => s + r.sentiment, 0) / previousResults.length;
 
   if (previousAvgSentiment > 0.3 && currentAvgSentiment < 0.1) {
-    const msg = `Gennemsnitssentiment er faldet fra positivt (${previousAvgSentiment.toFixed(2)}) til neutralt/negativt (${currentAvgSentiment.toFixed(2)}).`;
-    const body = buildAlertBody('sentiment_aendring', company.name, msg, previousAvgSentiment * 100, currentAvgSentiment * 100, today, dashboardUrl);
-    createAlert(uuidv4(), company.id, 'sentiment_aendring', msg);
-    alertsToSend.push({ type: 'sentiment_aendring', message: msg, subject: `Sentiment ændret — ${company.name}`, body });
+    const msg = `Sentiment faldet fra positivt (${previousAvgSentiment.toFixed(2)}) til neutralt/negativt (${currentAvgSentiment.toFixed(2)})`;
+    await createAlert(uuidv4(), company.id, 'sentiment_aendring', msg);
+    digestSignals.push({
+      headline: msg,
+      consequence: `Tonen i AI-svar om jer er blevet mere negativ eller neutral. Det kan reducere konverteringsraten for kunder der undersøger jer via AI.`,
+    });
   }
 
-  // 6. position_aendring: Company falls out of top-3 "chosen" responses
-  // Check direct_choice results specifically — were they in top 3 before but not now?
+  // 5. position_aendring: Company falls out of top-3 "chosen" responses
   const currentDirectChoice = currentResults.filter(r => r.prompt_type === 'direct_choice');
   const previousDirectChoice = previousResults.filter(r => r.prompt_type === 'direct_choice');
 
@@ -348,16 +386,18 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
     const isInTop3 = currentDirectChoice.some(r => detectTop3(r.response, company));
 
     if (wasInTop3 && !isInTop3) {
-      const msg = `${company.name} er faldet ud af top-3 i direkte AI-valg.`;
-      const body = buildAlertBody('position_aendring', company.name, msg, 1, 0, today, dashboardUrl);
-      createAlert(uuidv4(), company.id, 'position_aendring', msg);
-      alertsToSend.push({ type: 'position_aendring', message: msg, subject: `Position ændret — ${company.name}`, body });
+      const msg = `${company.name} er faldet ud af top-3 i direkte AI-valg`;
+      await createAlert(uuidv4(), company.id, 'position_aendring', msg);
+      digestSignals.push({
+        headline: msg,
+        consequence: `I er ikke længere i top-3 når AI anbefaler virksomheder i jeres kategori direkte. Det betyder at AI aktivt fraråder jer til nye kunder.`,
+      });
     }
   }
 
-  // Send email for each new alert
-  for (const alert of alertsToSend) {
-    await sendAlertEmail(company.email, company.name, company.id, alert.type, alert.message, alert.subject, alert.body);
+  // Send one consolidated digest email if there are any signals
+  if (digestSignals.length > 0) {
+    await sendWeeklyDigestEmail(company.email, company.name, company.id, digestSignals);
   }
 }
 
@@ -373,44 +413,3 @@ function detectTop3(response: string, company: Company): boolean {
   return top3Signals.some(s => lower.includes(s));
 }
 
-function buildAlertBody(
-  alertType: string,
-  companyName: string,
-  whatHappened: string,
-  before: number,
-  after: number,
-  detectedDate: string,
-  dashboardUrl: string
-): string {
-  const change = after - before;
-  const metric = getMetricName(alertType);
-  return `EMNE: [${alertType}] — ${companyName}
-
-HVA SKER:
-${whatHappened}
-
-TALLENE:
-Før: ${metric} = ${before.toFixed(0)}%
-Nu: ${metric} = ${after.toFixed(0)}%
-Ændring: ${change >= 0 ? '+' : ''}${change.toFixed(0)} procentpoint
-
-HVORNÅR:
-Detekteret: ${detectedDate}
-
-SE I DASHBOARD:
-${dashboardUrl}
-
----
-Dette er en observation. AISignal træffer ingen beslutninger for dig.`;
-}
-
-function getMetricName(alertType: string): string {
-  switch (alertType) {
-    case 'valgt_fald': return 'Valgt-score';
-    case 'nævnt_fald': return 'Nævnt-score';
-    case 'konkurrent_overtag': return 'Nævnt-rate';
-    case 'sentiment_aendring': return 'Sentiment';
-    case 'position_aendring': return 'Top-3 position';
-    default: return 'Score';
-  }
-}
