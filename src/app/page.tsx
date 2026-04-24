@@ -111,7 +111,7 @@ export default function LandingPage() {
             <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center text-xs font-bold">AI</div>
             <span className="font-semibold text-white tracking-tight">AISignal</span>
           </div>
-          <span className="text-xs text-zinc-500">Løbende AI-monitorering</span>
+          <a href="/login" className="text-xs text-zinc-400 hover:text-white transition-colors">Log ind</a>
         </div>
       </nav>
 

@@ -300,6 +300,29 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
                 {unseenAlerts.length} alert{unseenAlerts.length > 1 ? 's' : ''}
               </span>
             )}
+            {!company.trialActive && (
+              <button
+                onClick={() => router.push(`/dashboard/${id}/upgrade`)}
+                className="rounded-lg border border-violet-500/40 text-violet-400 hover:bg-violet-500/10 px-4 py-1.5 text-xs font-medium transition-colors"
+              >
+                Opgrader
+              </button>
+            )}
+            <button
+              onClick={() => router.push(`/dashboard/${id}/settings`)}
+              className="rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs font-medium transition-colors"
+            >
+              Indstillinger
+            </button>
+            <button
+              onClick={async () => {
+                await fetch('/api/logout', { method: 'POST' });
+                router.push('/login');
+              }}
+              className="rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs font-medium transition-colors"
+            >
+              Log ud
+            </button>
             <button
               onClick={triggerRun}
               disabled={running}

@@ -296,6 +296,10 @@ export function getRunCount(companyId: string): number {
   return row.cnt;
 }
 
+export function updateCompanyPassword(id: string, hashedPassword: string): void {
+  getDb().prepare('UPDATE companies SET password = ? WHERE id = ?').run(hashedPassword, id);
+}
+
 export function updateCompany(
   id: string,
   fields: Partial<Pick<Company, 'name' | 'domain' | 'email' | 'category' | 'country' | 'competitors'>>

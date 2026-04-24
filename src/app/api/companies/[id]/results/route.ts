@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompany, getCompanyResults, getCompanyAlerts, getRunCount } from '@/lib/db';
+import { verifySession, COOKIE_NAME } from '@/lib/auth';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    const token = req.cookies.get(COOKIE_NAME)?.value;
+    const session = token ? await verifySession(token) : null;
+    if (!session || session.companyId !== id) {
+      return NextResponse.json({ error: 'Ikke autoriseret.' }, { status: 401 });
+    }
+
     const company = getCompany(id);
     if (!company) {
       return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });

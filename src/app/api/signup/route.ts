@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import { createCompany, getDb } from '@/lib/db';
 import { sendWelcomeEmail } from '@/lib/email';
+import { signSession, COOKIE_NAME } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,6 +37,8 @@ export async function POST(req: NextRequest) {
       ? competitors.filter((c: unknown) => typeof c === 'string' && c.trim())
       : [];
 
+    const hashedPassword = await bcrypt.hash(password, 12);
+
     createCompany(
       id,
       name.trim(),
@@ -43,13 +47,22 @@ export async function POST(req: NextRequest) {
       category.trim(),
       competitorList,
       country.trim(),
-      password
+      hashedPassword
     );
 
-    // Fire-and-forget welcome email
     sendWelcomeEmail(emailLower, name.trim(), id).catch((e) => console.error('Welcome email error:', e));
 
-    return NextResponse.json({ companyId: id, existing: false }, { status: 201 });
+    const token = await signSession(id);
+    const res = NextResponse.json({ companyId: id, existing: false }, { status: 201 });
+    res.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
+    return res;
   } catch (err) {
     console.error('Signup error:', err);
     return NextResponse.json({ error: 'Intern fejl ved oprettelse.' }, { status: 500 });
