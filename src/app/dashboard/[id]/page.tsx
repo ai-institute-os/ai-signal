@@ -1,0 +1,537 @@
+'use client';
+
+import { useEffect, useState, useCallback, use } from 'react';
+import { useRouter } from 'next/navigation';
+
+interface Stats {
+  mentionRate: number;
+  chosenRate: number;
+  avgScore: number;
+  avgSentiment: number;
+  runCount: number;
+  totalResults: number;
+}
+
+interface TrendPoint {
+  date: string;
+  avgScore: number;
+  mentionRate: number;
+  chosenRate: number;
+  avgSentiment: number;
+}
+
+interface SystemStat {
+  system: string;
+  avgScore: number;
+  mentionRate: number;
+}
+
+interface TypeStat {
+  type: string;
+  avgScore: number;
+  mentionRate: number;
+  chosenRate: number;
+}
+
+interface Alert {
+  id: string;
+  type: string;
+  message: string;
+  created_at: string;
+  seen: number;
+}
+
+interface RecentResult {
+  id: string;
+  prompt_type: string;
+  ai_system: string;
+  mentioned: number;
+  chosen: number;
+  score: number;
+  sentiment: number;
+  response: string;
+  created_at: string;
+}
+
+interface UpsellBanner {
+  recommendation: 'aiscore' | 'aiselect';
+  product: string;
+  headline: string;
+  body: string;
+  cta: string;
+  color: string;
+  count: number;
+}
+
+interface DashboardData {
+  company: {
+    id: string;
+    name: string;
+    domain: string;
+    category: string;
+    plan: 'free' | 'premium';
+    productsPurchased: string[];
+    trialEndsAt: string | null;
+    trialActive: boolean;
+    trialDaysLeft: number | null;
+  };
+  stats: Stats;
+  trend: TrendPoint[];
+  bySystem: SystemStat[];
+  byType: TypeStat[];
+  alerts: Alert[];
+  recentResults: RecentResult[];
+}
+
+const PROMPT_TYPE_LABELS: Record<string, string> = {
+  direct_choice: 'Direktvalg',
+  competitor_comparison: 'Konkurrentsammenligning',
+  category_solution: 'Kategori-løsning',
+  brand_recognition: 'Brandkendskab',
+  trust: 'Tillidsgrad',
+  // Legacy labels for backward compatibility
+  recommendation: 'Anbefalingstest',
+  best_in_category: 'Bedst i kategori',
+  perception: 'Opfattelsesanalyse',
+};
+
+const ALERT_TYPE_LABELS: Record<string, string> = {
+  valgt_fald: 'Valgt-score faldet',
+  nævnt_fald: 'Nævnt-score faldet',
+  konkurrent_overtag: 'Konkurrent overtager',
+  sentiment_aendring: 'Sentiment ændret',
+  position_aendring: 'Position ændret',
+  score_drop: 'Score faldet',
+  score_rise: 'Score steget',
+  not_mentioned: 'Ikke nævnt',
+};
+
+function isNegativeAlert(type: string): boolean {
+  return ['valgt_fald', 'nævnt_fald', 'konkurrent_overtag', 'sentiment_aendring', 'position_aendring', 'score_drop', 'not_mentioned'].includes(type);
+}
+
+function ScoreBar({ value, max = 100, color = 'bg-violet-500' }: { value: number; max?: number; color?: string }) {
+  return (
+    <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all ${color}`}
+        style={{ width: `${Math.min(100, (value / max) * 100)}%` }}
+      />
+    </div>
+  );
+}
+
+function StatCard({ label, value, suffix = '', sub }: { label: string; value: number | string; suffix?: string; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="text-xs text-zinc-500 mb-1">{label}</div>
+      <div className="text-3xl font-bold text-white">
+        {value}<span className="text-lg text-zinc-400">{suffix}</span>
+      </div>
+      {sub && <div className="text-xs text-zinc-500 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+function sentimentLabel(sentiment: number): string {
+  if (sentiment > 0.3) return 'Positiv';
+  if (sentiment < -0.1) return 'Negativ';
+  return 'Neutral';
+}
+
+function sentimentColor(sentiment: number): string {
+  if (sentiment > 0.3) return 'text-green-400';
+  if (sentiment < -0.1) return 'text-red-400';
+  return 'text-zinc-400';
+}
+
+function DualCurveChart({ trend }: { trend: TrendPoint[] }) {
+  if (trend.length < 2) return null;
+  const w = 300;
+  const h = 80;
+
+  const maxMention = Math.max(...trend.map(t => t.mentionRate), 1);
+  const maxChosen = Math.max(...trend.map(t => t.chosenRate), 1);
+  const maxVal = Math.max(maxMention, maxChosen, 1);
+
+  const mentionPts = trend.map((t, i) => {
+    const x = (i / (trend.length - 1)) * w;
+    const y = h - (t.mentionRate / maxVal) * h;
+    return `${x},${y}`;
+  });
+
+  const chosenPts = trend.map((t, i) => {
+    const x = (i / (trend.length - 1)) * w;
+    const y = h - (t.chosenRate / maxVal) * h;
+    return `${x},${y}`;
+  });
+
+  const mentionPath = `M ${mentionPts.join(' L ')}`;
+  const chosenPath = `M ${chosenPts.join(' L ')}`;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
+        <path d={mentionPath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={chosenPath} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4,2" />
+      </svg>
+      <div className="flex items-center gap-4 mt-2">
+        <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+          <span className="w-3 h-0.5 bg-green-500 inline-block" />
+          Nævnt-score
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+          <span className="w-3 h-0.5 bg-violet-500 inline-block" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#8b5cf6 0,#8b5cf6 4px,transparent 4px,transparent 6px)' }} />
+          Valgt-score
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function DashboardPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [upsell, setUpsell] = useState<UpsellBanner | null>(null);
+  const [upsellDismissed, setUpsellDismissed] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/companies/${id}/results`);
+      if (res.status === 404) {
+        router.push('/');
+        return;
+      }
+      const d = await res.json();
+      setData(d);
+    } catch {
+      setError('Kunne ikke hente data.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, router]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  useEffect(() => {
+    // Load upsell recommendation once on mount (every ~5th page load via session storage counter)
+    const key = `upsell_shown_${id}`;
+    const shown = parseInt(sessionStorage.getItem(key) || '0', 10);
+    if (shown === 0) {
+      fetch(`/api/upsell?companyId=${id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.error) setUpsell(d);
+        })
+        .catch(() => {});
+      sessionStorage.setItem(key, '1');
+    }
+  }, [id]);
+
+  const triggerRun = async () => {
+    setRunning(true);
+    try {
+      const res = await fetch('/api/monitor/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: id }),
+      });
+      const d = await res.json();
+      if (d.throttled) {
+        alert(d.message);
+      } else {
+        setTimeout(fetchData, 8000);
+      }
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-zinc-400 text-sm animate-pulse">Indlæser data...</div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-red-400 text-sm">{error || 'Ingen data'}</div>
+      </div>
+    );
+  }
+
+  const { company, stats, trend, bySystem, byType, alerts, recentResults } = data;
+  const unseenAlerts = alerts.filter(a => !a.seen);
+  const avgSentiment = stats.avgSentiment ?? 0;
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white">
+      {/* Nav */}
+      <nav className="border-b border-zinc-800 px-6 py-4 sticky top-0 bg-zinc-950/90 backdrop-blur z-10">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80">
+              <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center text-xs font-bold">AI</div>
+              <span className="font-semibold tracking-tight">AISignal</span>
+            </button>
+            <span className="text-zinc-600">/</span>
+            <span className="text-sm text-zinc-300">{company.name}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {company.trialActive && (
+              <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-2.5 py-0.5 text-xs text-violet-400">
+                Premium
+              </span>
+            )}
+            {unseenAlerts.length > 0 && (
+              <span className="rounded-full bg-red-500/20 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">
+                {unseenAlerts.length} alert{unseenAlerts.length > 1 ? 's' : ''}
+              </span>
+            )}
+            <button
+              onClick={triggerRun}
+              disabled={running}
+              className="rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-1.5 text-xs font-medium transition-colors"
+            >
+              {running ? 'Kører...' : 'Kør nu'}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        {/* Premium trial banner */}
+        {company.trialActive && company.trialDaysLeft !== null && (
+          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center text-violet-400 text-sm font-bold">✦</div>
+              <div>
+                <div className="text-sm font-semibold text-violet-300">AISignal Premium — gratis prøveperiode</div>
+                <div className="text-xs text-zinc-400 mt-0.5">
+                  Du har adgang til alle premium-funktioner i <span className="text-violet-400 font-medium">{company.trialDaysLeft} dage</span> som tak for dit AIScore-køb.
+                  Herefter aktiveres automatisk betaling.
+                </div>
+              </div>
+            </div>
+            <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-3 py-1 text-xs text-violet-400 whitespace-nowrap">
+              Premium aktiv
+            </span>
+          </div>
+        )}
+
+        {/* Upsell banner */}
+        {upsell && !upsellDismissed && (
+          <div className={`rounded-xl border px-5 py-4 flex items-start justify-between gap-4 ${
+            upsell.color === 'pink'
+              ? 'border-pink-500/30 bg-pink-500/5'
+              : 'border-blue-500/30 bg-blue-500/5'
+          }`}>
+            <div className="flex items-start gap-3 flex-1">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
+                upsell.color === 'pink' ? 'bg-pink-500/20 text-pink-400' : 'bg-blue-500/20 text-blue-400'
+              }`}>
+                {upsell.color === 'pink' ? '★' : '⬡'}
+              </div>
+              <div className="flex-1">
+                <div className={`text-xs font-medium mb-0.5 ${upsell.color === 'pink' ? 'text-pink-400' : 'text-blue-400'}`}>
+                  {upsell.product}
+                </div>
+                <div className="text-sm font-semibold text-white mb-1">{upsell.headline}</div>
+                <div className="text-xs text-zinc-400 leading-relaxed">{upsell.body}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setUpsellDismissed(true)}
+              className="text-zinc-600 hover:text-zinc-400 text-lg leading-none shrink-0"
+              aria-label="Luk"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {stats.totalResults === 0 && (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-12 text-center">
+            <div className="text-4xl mb-4">📡</div>
+            <h2 className="text-lg font-semibold mb-2">Første monitorering er igang</h2>
+            <p className="text-sm text-zinc-400 mb-6">
+              Vi stiller prompts til AI-systemerne nu. Resultater klar om ca. 30–60 sekunder.
+            </p>
+            <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
+              <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+              Venter på resultater...
+            </div>
+          </div>
+        )}
+
+        {/* Stats row */}
+        {stats.totalResults > 0 && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatCard
+                label="Nævnt-score"
+                value={stats.mentionRate}
+                suffix="%"
+                sub="nævnt af AI-systemer"
+              />
+              <StatCard
+                label="Valgt-score"
+                value={stats.chosenRate}
+                suffix="%"
+                sub="valgt som foretrukken"
+              />
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+                <div className="text-xs text-zinc-500 mb-1">Sentiment</div>
+                <div className={`text-3xl font-bold ${sentimentColor(avgSentiment)}`}>
+                  {sentimentLabel(avgSentiment)}
+                </div>
+                <div className="text-xs text-zinc-500 mt-1">score: {avgSentiment > 0 ? '+' : ''}{avgSentiment.toFixed(2)}</div>
+              </div>
+              <StatCard label="Analyser" value={stats.totalResults} sub={`${stats.runCount} kørsler`} />
+            </div>
+
+            {/* Nævnt vs Valgt dual-curve chart */}
+            {trend.length > 1 && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold text-zinc-300">Nævnt vs Valgt over tid</h2>
+                  <span className="text-xs text-zinc-500">Seneste {trend.length} dage</span>
+                </div>
+                <DualCurveChart trend={trend} />
+                <div className="flex justify-between text-xs text-zinc-600 mt-2">
+                  <span>{trend[0]?.date}</span>
+                  <span>{trend[trend.length - 1]?.date}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Alerts */}
+            {alerts.length > 0 && (
+              <div className="space-y-2">
+                <h2 className="text-sm font-semibold text-zinc-300">Alerts</h2>
+                {alerts.map(a => (
+                  <div
+                    key={a.id}
+                    className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-3 ${
+                      isNegativeAlert(a.type)
+                        ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                        : 'border-green-500/30 bg-green-500/10 text-green-300'
+                    }`}
+                  >
+                    <span className="shrink-0 mt-0.5">{isNegativeAlert(a.type) ? '↓' : '↑'}</span>
+                    <div className="flex-1">
+                      <span className="font-medium text-xs opacity-70 block mb-0.5">{ALERT_TYPE_LABELS[a.type] || a.type}</span>
+                      <span>{a.message}</span>
+                    </div>
+                    <span className="ml-auto shrink-0 text-xs opacity-60">{a.created_at.split('T')[0]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Per-type breakdown */}
+            {byType.length > 0 && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <h2 className="text-sm font-semibold text-zinc-300 mb-4">Analyse pr. testtype</h2>
+                <div className="space-y-4">
+                  {byType.map(t => (
+                    <div key={t.type}>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-zinc-300">{PROMPT_TYPE_LABELS[t.type] || t.type}</span>
+                        <div className="flex items-center gap-3 text-zinc-500">
+                          <span>Nævnt {t.mentionRate}%</span>
+                          <span>Valgt {t.chosenRate}%</span>
+                          <span className="text-violet-400 font-medium">{t.avgScore}/100</span>
+                        </div>
+                      </div>
+                      <ScoreBar value={t.avgScore} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI system breakdown */}
+            {bySystem.length > 0 && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <h2 className="text-sm font-semibold text-zinc-300 mb-4">AI-systemer</h2>
+                <div className="space-y-3">
+                  {bySystem.map(s => (
+                    <div key={s.system} className="flex items-center gap-4 text-xs">
+                      <span className="w-40 truncate text-zinc-400">{s.system}</span>
+                      <div className="flex-1">
+                        <ScoreBar value={s.avgScore} />
+                      </div>
+                      <span className="text-zinc-300 w-12 text-right">{s.avgScore}/100</span>
+                      <span className="text-zinc-500 w-20 text-right">nævnt {s.mentionRate}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent results */}
+            {recentResults.length > 0 && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <h2 className="text-sm font-semibold text-zinc-300 mb-4">Seneste resultater</h2>
+                <div className="space-y-2">
+                  {recentResults.map(r => (
+                    <div key={r.id} className="border border-zinc-800 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setExpandedResult(expandedResult === r.id ? null : r.id)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-xs text-left hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`w-2 h-2 rounded-full ${r.mentioned ? 'bg-green-400' : 'bg-zinc-600'}`}
+                          />
+                          <span className="text-zinc-300">{PROMPT_TYPE_LABELS[r.prompt_type] || r.prompt_type}</span>
+                          {r.chosen ? (
+                            <span className="rounded-full bg-violet-500/20 text-violet-400 px-2 py-0.5">Valgt</span>
+                          ) : r.mentioned ? (
+                            <span className="rounded-full bg-green-500/20 text-green-400 px-2 py-0.5">Nævnt</span>
+                          ) : (
+                            <span className="rounded-full bg-zinc-700 text-zinc-500 px-2 py-0.5">Ikke nævnt</span>
+                          )}
+                          {r.sentiment !== undefined && r.sentiment !== 0 && (
+                            <span className={`rounded-full px-2 py-0.5 ${r.sentiment > 0.3 ? 'bg-green-500/10 text-green-400' : r.sentiment < -0.1 ? 'bg-red-500/10 text-red-400' : 'bg-zinc-700 text-zinc-500'}`}>
+                              {r.sentiment > 0 ? '+' : ''}{r.sentiment.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-zinc-500">
+                          <span className="text-violet-400">{r.score}/100</span>
+                          <span>{r.created_at.replace('T', ' ').split('.')[0]}</span>
+                          <span>{expandedResult === r.id ? '↑' : '↓'}</span>
+                        </div>
+                      </button>
+                      {expandedResult === r.id && (
+                        <div className="border-t border-zinc-800 px-4 py-3 text-xs text-zinc-400 bg-zinc-950/50">
+                          <p className="text-zinc-500 mb-2 font-medium">AI-svar:</p>
+                          <p className="leading-relaxed whitespace-pre-wrap">{r.response}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
