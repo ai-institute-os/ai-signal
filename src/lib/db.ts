@@ -781,3 +781,20 @@ export async function createArticle(article: Omit<Article, 'created_at'>): Promi
   });
   return (await getArticleBySlug(article.slug))!;
 }
+
+export async function getAllArticles(limit = 200): Promise<Article[]> {
+  const db = await ensureInit();
+  const result = await db.execute({
+    sql: 'SELECT * FROM articles ORDER BY created_at DESC LIMIT ?',
+    args: [limit],
+  });
+  return result.rows.map(row => parseArticleRow(row as Record<string, unknown>));
+}
+
+export async function updateArticleTags(id: string, tags: string[]): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: 'UPDATE articles SET tags = ? WHERE id = ?',
+    args: [JSON.stringify(tags), id],
+  });
+}
