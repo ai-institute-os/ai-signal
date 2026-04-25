@@ -3,8 +3,6 @@ import { createClient } from "@libsql/client";
 
 export const dynamic = "force-dynamic";
 
-const CRON_SCHEDULE = "0 8 * * 1";
-
 export async function GET() {
   const timestamp = new Date().toISOString();
 
@@ -14,18 +12,22 @@ export async function GET() {
     const db = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
     await db.execute("SELECT 1");
 
+    const result = await db.execute(
+      "SELECT COUNT(*) as cnt FROM companies WHERE subscriber_status = 'active'"
+    );
+    const subscribers = Number(result.rows[0].cnt ?? 0);
+
     return NextResponse.json({
       status: "ok",
-      db: "connected",
-      cron: CRON_SCHEDULE,
+      db: "ok",
+      subscribers,
       timestamp,
     });
   } catch {
     return NextResponse.json(
       {
         status: "error",
-        db: "disconnected",
-        cron: CRON_SCHEDULE,
+        db: "error",
         timestamp,
       },
       { status: 503 }
