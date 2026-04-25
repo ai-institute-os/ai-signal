@@ -6,8 +6,13 @@ import { stripe, PLANS } from '@/lib/stripe';
 // to a paid Stripe subscription (Mellem plan by default).
 // Companies without a payment method on file are downgraded to free instead.
 export async function GET(req: NextRequest) {
+  const configuredSecret = process.env.CRON_SECRET;
+  if (!configuredSecret) {
+    console.error('CRON_SECRET not configured');
+    return NextResponse.json({ error: 'Cron not configured' }, { status: 503 });
+  }
   const cronSecret = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+  if (cronSecret !== configuredSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
