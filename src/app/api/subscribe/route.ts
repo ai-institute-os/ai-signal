@@ -5,11 +5,24 @@ import {
   updateNewsletterConfirmationToken,
 } from '@/lib/db';
 import { sendNewsletterConfirmationEmail } from '@/lib/email';
+import { checkRateLimit } from '@/lib/ratelimit';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown';
+    const { allowed, remainingMs } = checkRateLimit(`subscribe:${ip}`);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'For mange forsøg. Prøv igen senere.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(remainingMs / 1000)) } }
+      );
+    }
+
     const body = await req.json();
     const email = (body.email || '').toLowerCase().trim();
     const name = (body.name || '').trim();

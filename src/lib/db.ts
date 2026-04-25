@@ -983,6 +983,15 @@ export async function logEmail(
   });
 }
 
+export async function hasEmailBeenSent(subscriberId: string, emailType: string): Promise<boolean> {
+  const db = await ensureInit();
+  const r = await db.execute({
+    sql: 'SELECT id FROM email_log WHERE subscriber_id = ? AND email_type = ? LIMIT 1',
+    args: [subscriberId, emailType],
+  });
+  return r.rows.length > 0;
+}
+
 export async function scheduleEmail(
   id: string,
   subscriberId: string,

@@ -31,6 +31,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${BASE_URL()}/tilmeldt?status=already_confirmed`);
     }
 
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - new Date(subscriber.created_at).getTime() > SEVEN_DAYS) {
+      return NextResponse.redirect(`${BASE_URL()}/tilmeldt?status=error&reason=expired`);
+    }
+
     await confirmNewsletterSubscriber(subscriber.id);
 
     // Trigger welcome series

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getNewsletterSubscriberById,
+  hasEmailBeenSent,
   logEmail,
   scheduleEmail,
 } from '@/lib/db';
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
 
     if (subscriber.status !== 'confirmed') {
       return NextResponse.json({ error: 'Subscriber not confirmed' }, { status: 400 });
+    }
+
+    if (await hasEmailBeenSent(subscriberId, 'welcome_1')) {
+      return NextResponse.json({ ok: true });
     }
 
     // Send Email 1 immediately
