@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 
 const CATEGORIES = [
   'Konsulentvirksomhed',
@@ -151,7 +150,6 @@ function MonitoringPreview() {
 }
 
 export default function LandingPage() {
-  const router = useRouter();
   const [heroEmail, setHeroEmail] = useState('');
   const [form, setForm] = useState({
     name: '',
@@ -166,6 +164,8 @@ export default function LandingPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState('');
 
   const handleHeroSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,13 +209,8 @@ export default function LandingPage() {
         return;
       }
 
-      await fetch('/api/monitor/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId: data.companyId }),
-      });
-
-      router.push(`/dashboard/${data.companyId}`);
+      setSubmittedEmail(form.email);
+      setSubmitted(true);
     } catch {
       setError('Netværksfejl. Tjek din forbindelse og prøv igen.');
     } finally {
@@ -622,6 +617,41 @@ export default function LandingPage() {
             </p>
           </div>
 
+          {submitted ? (
+            <div
+              className="rounded-2xl p-10 text-center"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+                style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)' }}
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: '#00D4FF' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Tjek din email</h3>
+              <p className="mb-2" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                Vi har sendt en bekræftelsesmail til
+              </p>
+              <p className="font-semibold mb-6" style={{ color: '#00D4FF' }}>{submittedEmail}</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Klik på linket i emailen for at aktivere din overvågning.<br />
+                Linket udløber efter 24 timer.
+              </p>
+              <p className="text-xs mt-6" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Ingen email? Tjek din spam-mappe eller{' '}
+                <button
+                  onClick={() => setSubmitted(false)}
+                  className="underline hover:no-underline transition-all"
+                  style={{ color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  prøv igen
+                </button>
+                .
+              </p>
+            </div>
+          ) : (
           <div
             className="rounded-2xl p-8"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
@@ -755,6 +785,7 @@ export default function LandingPage() {
               </p>
             </form>
           </div>
+          )}
         </div>
       </section>
 

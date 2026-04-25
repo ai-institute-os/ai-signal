@@ -7,6 +7,7 @@ import {
   markTrialWarningSent,
   getFreeCompaniesForUpsellEmail,
   markUpsellEmailSent,
+  deletePendingExpiredCompanies,
 } from '@/lib/db';
 import { runMonitoringForCompany } from '@/lib/monitor';
 import {
@@ -29,6 +30,12 @@ export async function GET(req: NextRequest) {
   }
   if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // 0. Delete pending subscribers whose verification link has expired (>24h).
+  const deletedPending = await deletePendingExpiredCompanies();
+  if (deletedPending > 0) {
+    console.log(`Cron: deleted ${deletedPending} expired pending subscriber(s)`);
   }
 
   // 1. Expire premium trials that have passed their end date.
@@ -89,6 +96,7 @@ export async function GET(req: NextRequest) {
       trialWarnings10: warning10.length,
       trialWarnings2: warning2.length,
       upsellSent: upsellCandidates.length,
+      deletedPending,
     });
   }
 

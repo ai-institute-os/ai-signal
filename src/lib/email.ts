@@ -9,6 +9,18 @@ function getResend(): Resend | null {
   return new Resend(key);
 }
 
+async function sendEmailWithRetry(
+  resend: Resend,
+  payload: Parameters<Resend['emails']['send']>[0]
+): Promise<void> {
+  try {
+    await resend.emails.send(payload);
+  } catch {
+    await new Promise((r) => setTimeout(r, 1000));
+    await resend.emails.send(payload);
+  }
+}
+
 const BASE_URL = () => process.env.NEXT_PUBLIC_BASE_URL || 'https://aisignal.dk';
 
 async function subscriberFooter(companyId: string): Promise<string> {
@@ -79,6 +91,44 @@ function ctaButton(href: string, label: string): string {
   </table>`;
 }
 
+export async function sendVerificationEmail(
+  toEmail: string,
+  companyName: string,
+  companyId: string,
+  verificationToken: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping verification email');
+    return;
+  }
+
+  const verifyUrl = `${BASE_URL()}/api/subscribers/verify?token=${encodeURIComponent(verificationToken)}`;
+  const subject = `Bekræft din email — AISignal`;
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din email</h1>
+    <p style="margin:0 0 8px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+      Hej ${companyName} — du er næsten klar.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
+      Klik på knappen nedenfor for at bekræfte din email og aktivere din AISignal-overvågning. Linket udløber om 24 timer.
+    </p>
+    ${ctaButton(verifyUrl, 'Bekræft email og aktiver →')}
+    <p style="margin:20px 0 0;font-size:12px;color:#52525b;line-height:1.6;">
+      Hvis du ikke har oprettet en konto på AISignal, kan du ignorere denne email.
+    </p>`;
+
+  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
+  const text = `Bekræft din AISignal-email\n\nKlik her for at aktivere din overvågning:\n${verifyUrl}\n\nLinket udløber om 24 timer.\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send verification email:', err);
+  }
+}
+
 // ─── EXISTING FUNCTIONS ────────────────────────────────────────────────────────
 
 export async function sendAlertEmail(
@@ -92,7 +142,7 @@ export async function sendAlertEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping alert email');
+    console.error('RESEND_API_KEY not set — skipping alert email');
     return;
   }
 
@@ -130,9 +180,9 @@ export async function sendAlertEmail(
   const text = `AISignal — ${subject}\n\n${textBody}\n\n© 2026 AISignal`;
 
   try {
-    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+    await sendEmailWithRetry(resend, { from: FROM_EMAIL, to: toEmail, subject, html, text });
   } catch (err) {
-    console.error('Failed to send alert email:', err);
+    console.error('Failed to send alert email after retry:', err);
   }
 }
 
@@ -145,7 +195,7 @@ export async function sendTrialWelcomeEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping trial welcome email');
+    console.error('RESEND_API_KEY not set — skipping trial welcome email');
     return;
   }
 
@@ -187,7 +237,7 @@ export async function sendTrialExpiredEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping trial expired email');
+    console.error('RESEND_API_KEY not set — skipping trial expired email');
     return;
   }
 
@@ -209,9 +259,9 @@ export async function sendTrialExpiredEmail(
   const text = `Din AISignal Premium-trial for ${companyName} er nu udløbet.\n\nDin konto er skiftet til gratis-planen. Kontakt os for at opgradere og fortsætte med fuld overvågning.\n\nDashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
 
   try {
-    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+    await sendEmailWithRetry(resend, { from: FROM_EMAIL, to: toEmail, subject, html, text });
   } catch (err) {
-    console.error('Failed to send trial expired email:', err);
+    console.error('Failed to send trial expired email after retry:', err);
   }
 }
 
@@ -222,7 +272,7 @@ export async function sendWelcomeEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping welcome email');
+    console.error('RESEND_API_KEY not set — skipping welcome email');
     return;
   }
 
@@ -268,7 +318,7 @@ export async function sendFirstReportReadyEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping first report email');
+    console.error('RESEND_API_KEY not set — skipping first report email');
     return;
   }
 
@@ -311,7 +361,7 @@ export async function sendTrialWarningEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping trial warning email');
+    console.error('RESEND_API_KEY not set — skipping trial warning email');
     return;
   }
 
@@ -352,9 +402,9 @@ export async function sendTrialWarningEmail(
   const text = `AISignal — ${subject}\n\nDin gratis adgang udløber om ${daysLeft} dage.\n\nAktiver abonnement: ${upgradeUrl}\n\n© 2026 AISignal`;
 
   try {
-    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+    await sendEmailWithRetry(resend, { from: FROM_EMAIL, to: toEmail, subject, html, text });
   } catch (err) {
-    console.error('Failed to send trial warning email:', err);
+    console.error('Failed to send trial warning email after retry:', err);
   }
 }
 
@@ -368,7 +418,7 @@ export async function sendSubscriptionActivatedEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping subscription activated email');
+    console.error('RESEND_API_KEY not set — skipping subscription activated email');
     return;
   }
 
@@ -425,7 +475,7 @@ export async function sendUpsellEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping upsell email');
+    console.error('RESEND_API_KEY not set — skipping upsell email');
     return;
   }
 
@@ -634,7 +684,7 @@ export async function sendWeeklyDigestEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping weekly digest email');
+    console.error('RESEND_API_KEY not set — skipping weekly digest email');
     return;
   }
 
@@ -717,7 +767,7 @@ export async function sendSubscriptionCancelledEmail(
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
-    console.warn('RESEND_API_KEY not set — skipping subscription cancelled email');
+    console.error('RESEND_API_KEY not set — skipping subscription cancelled email');
     return;
   }
 

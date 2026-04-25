@@ -50,7 +50,9 @@ async function initSchema(db: Client): Promise<void> {
       trial_warning_2_sent INTEGER NOT NULL DEFAULT 0,
       alert_frequency TEXT NOT NULL DEFAULT 'weekly',
       subscriber_status TEXT NOT NULL DEFAULT 'active',
-      paused_until TEXT
+      paused_until TEXT,
+      verification_token TEXT,
+      email_verified INTEGER NOT NULL DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS monitoring_runs (
@@ -96,6 +98,8 @@ async function initSchema(db: Client): Promise<void> {
     `ALTER TABLE companies ADD COLUMN alert_frequency TEXT NOT NULL DEFAULT 'weekly'`,
     `ALTER TABLE companies ADD COLUMN subscriber_status TEXT NOT NULL DEFAULT 'active'`,
     `ALTER TABLE companies ADD COLUMN paused_until TEXT`,
+    `ALTER TABLE companies ADD COLUMN verification_token TEXT`,
+    `ALTER TABLE companies ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1`,
   ];
   for (const sql of migrations) {
     try {
@@ -128,8 +132,10 @@ function parseCompanyRow(row: Record<string, unknown>): Company {
     stripe_subscription_status: (row.stripe_subscription_status as string | null) ?? null,
     stripe_price_id: (row.stripe_price_id as string | null) ?? null,
     alert_frequency: ((row.alert_frequency as string) || 'weekly') as 'weekly' | 'monthly',
-    subscriber_status: ((row.subscriber_status as string) || 'active') as 'active' | 'paused' | 'unsubscribed',
+    subscriber_status: ((row.subscriber_status as string) || 'active') as 'active' | 'paused' | 'unsubscribed' | 'pending',
     paused_until: (row.paused_until as string | null) ?? null,
+    verification_token: (row.verification_token as string | null) ?? null,
+    email_verified: (row.email_verified as number) === 1,
   };
 }
 
@@ -153,8 +159,10 @@ export interface Company {
   stripe_subscription_status: string | null;
   stripe_price_id: string | null;
   alert_frequency: 'weekly' | 'monthly';
-  subscriber_status: 'active' | 'paused' | 'unsubscribed';
+  subscriber_status: 'active' | 'paused' | 'unsubscribed' | 'pending';
   paused_until: string | null;
+  verification_token: string | null;
+  email_verified: boolean;
 }
 
 export interface MonitoringRun {
@@ -196,14 +204,23 @@ export async function createCompany(
   category: string,
   competitors: string[],
   country: string,
-  password: string
+  password: string,
+  verificationToken?: string
 ): Promise<Company> {
   const db = await ensureInit();
-  await db.execute({
-    sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, name, domain, email, category, JSON.stringify(competitors), country, password],
-  });
+  if (verificationToken) {
+    await db.execute({
+      sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password, subscriber_status, email_verified, verification_token)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?)`,
+      args: [id, name, domain, email, category, JSON.stringify(competitors), country, password, verificationToken],
+    });
+  } else {
+    await db.execute({
+      sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, name, domain, email, category, JSON.stringify(competitors), country, password],
+    });
+  }
   return (await getCompany(id))!;
 }
 
@@ -405,7 +422,7 @@ export async function expireTrialForCompany(companyId: string): Promise<void> {
 export async function getAllActiveCompanies(): Promise<Company[]> {
   const db = await ensureInit();
   const r = await db.execute({
-    sql: "SELECT * FROM companies WHERE status = 'active' ORDER BY created_at ASC",
+    sql: "SELECT * FROM companies WHERE status = 'active' AND email_verified = 1 ORDER BY created_at ASC",
     args: [],
   });
   return r.rows.map(row => parseCompanyRow(row as Record<string, unknown>));
@@ -597,6 +614,34 @@ export interface SubscriberPreferences {
   alert_frequency: 'weekly' | 'monthly';
   subscriber_status: 'active' | 'paused' | 'unsubscribed';
   paused_until: string | null;
+}
+
+export async function getCompanyByVerificationToken(token: string): Promise<Company | null> {
+  const db = await ensureInit();
+  const result = await db.execute({
+    sql: 'SELECT * FROM companies WHERE verification_token = ?',
+    args: [token],
+  });
+  if (result.rows.length === 0) return null;
+  return parseCompanyRow(result.rows[0] as Record<string, unknown>);
+}
+
+export async function verifyCompanyEmail(companyId: string): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `UPDATE companies SET email_verified = 1, verification_token = NULL, subscriber_status = 'active' WHERE id = ?`,
+    args: [companyId],
+  });
+}
+
+export async function deletePendingExpiredCompanies(): Promise<number> {
+  const db = await ensureInit();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const r = await db.execute({
+    sql: `DELETE FROM companies WHERE email_verified = 0 AND subscriber_status = 'pending' AND created_at <= ?`,
+    args: [cutoff],
+  });
+  return r.rowsAffected;
 }
 
 export async function updateSubscriberPreferences(

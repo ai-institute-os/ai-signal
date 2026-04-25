@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { createCompany, getCompanyByEmail } from '@/lib/db';
-import { sendWelcomeEmail } from '@/lib/email';
-import { signSession, COOKIE_NAME } from '@/lib/auth';
+import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,10 +26,21 @@ export async function POST(req: NextRequest) {
     const existing = await getCompanyByEmail(emailLower);
 
     if (existing) {
+      if (!existing.email_verified) {
+        // Resend verification email for pending accounts
+        const token = existing.verification_token;
+        if (token) {
+          sendVerificationEmail(emailLower, existing.name, existing.id, token).catch((e) =>
+            console.error('Resend verification email error:', e)
+          );
+        }
+        return NextResponse.json({ pending: true, existing: true });
+      }
       return NextResponse.json({ companyId: existing.id, existing: true });
     }
 
     const id = uuidv4();
+    const verificationToken = uuidv4();
     const competitorList: string[] = Array.isArray(competitors)
       ? competitors.filter((c: unknown) => typeof c === 'string' && c.trim())
       : [];
@@ -45,22 +55,15 @@ export async function POST(req: NextRequest) {
       category.trim(),
       competitorList,
       country.trim(),
-      hashedPassword
+      hashedPassword,
+      verificationToken
     );
 
-    sendWelcomeEmail(emailLower, name.trim(), id).catch((e) => console.error('Welcome email error:', e));
+    sendVerificationEmail(emailLower, name.trim(), id, verificationToken).catch((e) =>
+      console.error('Verification email error:', e)
+    );
 
-    const token = await signSession(id);
-    const res = NextResponse.json({ companyId: id, existing: false }, { status: 201 });
-    res.cookies.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    return res;
+    return NextResponse.json({ pending: true, existing: false }, { status: 201 });
   } catch (err) {
     console.error('Signup error:', err);
     return NextResponse.json({ error: 'Intern fejl ved oprettelse.' }, { status: 500 });
