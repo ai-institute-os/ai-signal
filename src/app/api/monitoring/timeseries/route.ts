@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
     }
 
-    const days = Math.min(Number(searchParams.get('days') ?? '30'), 90);
+    const rawDays = Number(searchParams.get('days') ?? '30');
+    const days = isNaN(rawDays) ? 30 : Math.min(Math.max(1, rawDays), 90);
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     const [bySystemDay, byDay] = await Promise.all([

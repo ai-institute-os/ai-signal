@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
     }
 
-    const limit = Math.min(Number(searchParams.get('limit') ?? '200'), 500);
+    const rawLimit = Number(searchParams.get('limit') ?? '200');
+    const limit = isNaN(rawLimit) ? 200 : Math.min(Math.max(1, rawLimit), 500);
     const filterPromptType = searchParams.get('promptType');
     const filterAiSystem = searchParams.get('aiSystem');
 
