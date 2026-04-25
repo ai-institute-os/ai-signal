@@ -962,6 +962,15 @@ export async function updateNewsletterConfirmationToken(id: string, token: strin
   });
 }
 
+export async function getAllConfirmedNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+  const db = await ensureInit();
+  const r = await db.execute({
+    sql: "SELECT * FROM newsletter_subscribers WHERE status = 'confirmed' ORDER BY confirmed_at DESC",
+    args: [],
+  });
+  return r.rows.map(row => parseSubscriberRow(row as Record<string, unknown>));
+}
+
 export async function logEmail(
   id: string,
   subscriberId: string,
