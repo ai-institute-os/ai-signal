@@ -798,3 +798,12 @@ export async function updateArticleTags(id: string, tags: string[]): Promise<voi
     args: [JSON.stringify(tags), id],
   });
 }
+
+export async function getActiveNewsletterSubscribers(): Promise<Company[]> {
+  const db = await ensureInit();
+  const result = await db.execute({
+    sql: "SELECT * FROM companies WHERE subscriber_status = 'active' AND email_verified = 1 ORDER BY created_at ASC",
+    args: [],
+  });
+  return result.rows.map(row => parseCompanyRow(row as Record<string, unknown>));
+}
