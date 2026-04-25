@@ -9,13 +9,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'companyId er påkrævet.' }, { status: 400 });
     }
 
-    const company = getCompany(companyId);
+    const company = await getCompany(companyId);
     if (!company) {
       return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
     }
 
     // Throttle: max one run per 5 minutes
-    const latest = getLatestRunForCompany(companyId);
+    const latest = await getLatestRunForCompany(companyId);
     if (latest && latest.status !== 'failed') {
       const ageMs = Date.now() - new Date(latest.created_at + 'Z').getTime();
       if (ageMs < 5 * 60 * 1000) {

@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
 
     let company = null;
     if (companyId) {
-      company = getCompany(companyId);
+      company = await getCompany(companyId);
     } else if (email) {
-      company = getCompanyByEmail(email);
+      company = await getCompanyByEmail(email);
     }
 
     let created = false;
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       const cleanDomain = (domain || email.split('@')[1] || '').toLowerCase().trim();
       const cleanName = (contactName || name).trim();
 
-      company = createCompany(
+      company = await createCompany(
         newId,
         name.trim(),
         cleanDomain,
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       created = true;
 
       // Activate trial before sending email so trialEndsAt is correct.
-      activateAISignalPremiumTrial(company.id);
+      await activateAISignalPremiumTrial(company.id);
       const trialEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
       // Fire-and-forget welcome email with credentials.
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    activateAISignalPremiumTrial(company.id);
+    await activateAISignalPremiumTrial(company.id);
     const trialEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
     // Send a welcome email even for re-activations (no password — they already have one).

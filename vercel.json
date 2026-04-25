@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/monitor-all",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/stripe-activate",
+      "schedule": "0 6 * * *"
     }
   ]
 }

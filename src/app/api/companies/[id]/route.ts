@@ -16,7 +16,7 @@ export async function GET(
   if (!(await authorize(req, id))) {
     return NextResponse.json({ error: 'Ikke autoriseret.' }, { status: 401 });
   }
-  const company = getCompany(id);
+  const company = await getCompany(id);
   if (!company) {
     return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
   }
@@ -33,7 +33,7 @@ export async function PATCH(
   if (!(await authorize(req, id))) {
     return NextResponse.json({ error: 'Ikke autoriseret.' }, { status: 401 });
   }
-  const company = getCompany(id);
+  const company = await getCompany(id);
   if (!company) {
     return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
   }
@@ -45,7 +45,7 @@ export async function PATCH(
     if (key in body) fields[key] = body[key];
   }
 
-  const updated = updateCompany(id, fields as Parameters<typeof updateCompany>[1]);
+  const updated = await updateCompany(id, fields as Parameters<typeof updateCompany>[1]);
   if (!updated) {
     return NextResponse.json({ error: 'Opdatering fejlede.' }, { status: 500 });
   }

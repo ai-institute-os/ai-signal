@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { createCompany, getDb } from '@/lib/db';
+import { createCompany, getCompanyByEmail } from '@/lib/db';
 import { sendWelcomeEmail } from '@/lib/email';
 import { signSession, COOKIE_NAME } from '@/lib/auth';
 
@@ -24,9 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const emailLower = email.toLowerCase().trim();
-    const existing = getDb()
-      .prepare('SELECT id FROM companies WHERE email = ?')
-      .get(emailLower) as { id: string } | undefined;
+    const existing = await getCompanyByEmail(emailLower);
 
     if (existing) {
       return NextResponse.json({ companyId: existing.id, existing: true });
@@ -39,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    createCompany(
+    await createCompany(
       id,
       name.trim(),
       domain.trim().toLowerCase(),

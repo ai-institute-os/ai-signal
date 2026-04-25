@@ -15,14 +15,16 @@ export async function GET(
       return NextResponse.json({ error: 'Ikke autoriseret.' }, { status: 401 });
     }
 
-    const company = getCompany(id);
+    const company = await getCompany(id);
     if (!company) {
       return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
     }
 
-    const results = getCompanyResults(id, 200);
-    const alerts = getCompanyAlerts(id);
-    const runCount = getRunCount(id);
+    const [results, alerts, runCount] = await Promise.all([
+      getCompanyResults(id, 200),
+      getCompanyAlerts(id),
+      getRunCount(id),
+    ]);
 
     // Aggregate stats
     const totalResults = results.length;
@@ -53,6 +55,8 @@ export async function GET(
       ? Math.ceil((new Date(company.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       : null;
 
+    const economicImpact = calcEconomicImpact(company.category, chosenRate);
+
     return NextResponse.json({
       company: {
         id: company.id,
@@ -66,6 +70,7 @@ export async function GET(
         trialDaysLeft,
       },
       stats: { mentionRate, chosenRate, avgScore, avgSentiment, runCount, totalResults },
+      economicImpact,
       trend,
       bySystem,
       byType,
@@ -131,4 +136,72 @@ function buildByType(results: { prompt_type: string; mentioned: number; chosen: 
     mentionRate: Math.round((d.mentioned / d.total) * 100),
     chosenRate: Math.round((d.chosen / d.total) * 100),
   }));
+}
+
+// Industry median chosen rates (%) — approximate benchmarks for Danish B2B categories.
+// Basis: AI-driven discovery is still early; top performers land ~20-30% chosen rate.
+const INDUSTRY_MEDIAN_CHOSEN: Record<string, number> = {
+  'Softwarevirksomhed': 18,
+  'Konsulentvirksomhed': 14,
+  'Marketing/Reklame': 16,
+  'Advokatfirma': 10,
+  'Revisionsfirma': 10,
+  'Rekruttering/HR': 14,
+  'Ingeniør/Teknisk rådgivning': 12,
+  'Byggeri/Ejendom': 10,
+  'Sundhed/Klinik': 12,
+  'E-handel/Webshop': 20,
+  'Restauration/Catering': 15,
+  'Produktion/Industri': 10,
+  'Transport/Logistik': 12,
+  'Finansielle ydelser': 14,
+  'Anden virksomhed': 13,
+};
+
+// Assumed AI-driven lead volume per month for a typical SMB (conservative).
+const MONTHLY_AI_LEADS = 200;
+// Average deal value (DKK) per won customer — category-agnostic default.
+const AVG_DEAL_DKK = 50_000;
+// Conversion rate from AI-chosen recommendation to actual deal.
+const CONVERSION_RATE = 0.05;
+
+function calcEconomicImpact(
+  category: string,
+  currentChosenRate: number
+): {
+  currentChosenRate: number;
+  industryMedianChosenRate: number;
+  estimatedMonthlyLeads: number;
+  estimatedMonthlyRevenueDKK: number;
+  industryMonthlyRevenueDKK: number;
+  deltaRevenueDKK: number;
+  interpretation: string;
+} {
+  const median = INDUSTRY_MEDIAN_CHOSEN[category] ?? 13;
+  const currentLeads = Math.round(MONTHLY_AI_LEADS * (currentChosenRate / 100));
+  const medianLeads = Math.round(MONTHLY_AI_LEADS * (median / 100));
+  const currentRevenue = Math.round(currentLeads * CONVERSION_RATE * AVG_DEAL_DKK);
+  const medianRevenue = Math.round(medianLeads * CONVERSION_RATE * AVG_DEAL_DKK);
+  const delta = currentRevenue - medianRevenue;
+
+  let interpretation: string;
+  if (currentChosenRate === 0) {
+    interpretation = 'Ingen data endnu — kør monitorering for at se estimat.';
+  } else if (delta > 0) {
+    interpretation = `Du ligger ${currentChosenRate - median} pp over branchemedian. Estimeret fordel: +${delta.toLocaleString('da-DK')} DKK/md.`;
+  } else if (delta < 0) {
+    interpretation = `Du ligger ${median - currentChosenRate} pp under branchemedian. Estimeret tab: ${delta.toLocaleString('da-DK')} DKK/md.`;
+  } else {
+    interpretation = 'Du er præcis på branchemedian.';
+  }
+
+  return {
+    currentChosenRate,
+    industryMedianChosenRate: median,
+    estimatedMonthlyLeads: currentLeads,
+    estimatedMonthlyRevenueDKK: currentRevenue,
+    industryMonthlyRevenueDKK: medianRevenue,
+    deltaRevenueDKK: delta,
+    interpretation,
+  };
 }

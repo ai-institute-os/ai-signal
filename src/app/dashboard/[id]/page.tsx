@@ -63,6 +63,22 @@ interface UpsellBanner {
   count: number;
 }
 
+interface EconomicImpact {
+  currentChosenRate: number;
+  industryMedianChosenRate: number;
+  estimatedMonthlyLeads: number;
+  estimatedMonthlyRevenueDKK: number;
+  industryMonthlyRevenueDKK: number;
+  deltaRevenueDKK: number;
+  interpretation: string;
+}
+
+interface TimeseriesData {
+  dates: string[];
+  systems: Record<string, { mentionRate: number[]; chosenRate: number[] }>;
+  aggregated: { mentionRate: number[]; chosenRate: number[] };
+}
+
 interface DashboardData {
   company: {
     id: string;
@@ -76,6 +92,7 @@ interface DashboardData {
     trialDaysLeft: number | null;
   };
   stats: Stats;
+  economicImpact?: EconomicImpact;
   trend: TrendPoint[];
   bySystem: SystemStat[];
   byType: TypeStat[];
@@ -145,24 +162,187 @@ function sentimentColor(sentiment: number): string {
   return 'text-zinc-400';
 }
 
+const SYSTEM_COLORS: Record<string, string> = {
+  ChatGPT: '#10b981',
+  Gemini: '#3b82f6',
+  Perplexity: '#f59e0b',
+  Claude: '#8b5cf6',
+  Aggregeret: '#ffffff',
+};
+
+function getSystemColor(system: string, idx: number): string {
+  if (SYSTEM_COLORS[system]) return SYSTEM_COLORS[system];
+  const fallbacks = ['#ec4899', '#06b6d4', '#84cc16', '#f97316', '#a855f7'];
+  return fallbacks[idx % fallbacks.length];
+}
+
+function SystemHistoryChart({ data }: { data: TimeseriesData }) {
+  const { dates, systems, aggregated } = data;
+  if (dates.length < 2) return null;
+
+  const w = 600;
+  const h = 140;
+  const padTop = 12;
+  const padBottom = 4;
+  const drawH = h - padTop - padBottom;
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; idx: number } | null>(null);
+
+  const allSystems = Object.keys(systems);
+  const allSeries: Array<{ name: string; values: number[]; color: string }> = [
+    ...allSystems.map((s, i) => ({ name: s, values: systems[s].mentionRate, color: getSystemColor(s, i) })),
+    { name: 'Aggregeret', values: aggregated.mentionRate, color: SYSTEM_COLORS['Aggregeret'] },
+  ];
+
+  const maxVal = Math.max(...allSeries.flatMap(s => s.values), 20);
+
+  const buildPath = (values: number[]) => {
+    const pts = values.map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = padTop + drawH - (v / maxVal) * drawH;
+      return `${x},${y}`;
+    });
+    return `M ${pts.join(' L ')}`;
+  };
+
+  const gridLines = [0, 25, 50, 75, 100].filter(v => v <= maxVal + 5);
+
+  return (
+    <div>
+      <div className="relative" onMouseLeave={() => setTooltip(null)}>
+        <svg
+          viewBox={`0 0 ${w} ${h}`}
+          className="w-full"
+          style={{ height: 140 }}
+          preserveAspectRatio="none"
+          onMouseMove={e => {
+            const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+            const relX = (e.clientX - rect.left) / rect.width;
+            const idx = Math.round(relX * (dates.length - 1));
+            setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top, idx: Math.max(0, Math.min(idx, dates.length - 1)) });
+          }}
+        >
+          {/* Grid lines */}
+          {gridLines.map(v => {
+            const y = padTop + drawH - (v / maxVal) * drawH;
+            return (
+              <g key={v}>
+                <line x1={0} y1={y} x2={w} y2={y} stroke="#27272a" strokeWidth={1} />
+                <text x={4} y={y - 3} fill="#52525b" fontSize={9} fontFamily="monospace">{v}%</text>
+              </g>
+            );
+          })}
+          {allSeries.map((s, si) => (
+            <path
+              key={s.name}
+              d={buildPath(s.values)}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={s.name === 'Aggregeret' ? 2.5 : 1.5}
+              strokeOpacity={s.name === 'Aggregeret' ? 0.95 : 0.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray={s.name === 'Aggregeret' ? undefined : si % 2 === 1 ? '5,3' : undefined}
+            />
+          ))}
+        </svg>
+        {tooltip && (
+          <div
+            className="absolute pointer-events-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs shadow-xl z-10"
+            style={{ left: Math.min(tooltip.x + 8, 300), top: 8 }}
+          >
+            <div className="text-zinc-400 mb-1 font-medium">{dates[tooltip.idx]}</div>
+            {allSeries.map(s => (
+              <div key={s.name} className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: s.color }} />
+                <span className="text-zinc-300">{s.name}:</span>
+                <span className="font-medium" style={{ color: s.color }}>{s.values[tooltip.idx]}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+        {allSeries.map(s => (
+          <div key={s.name} className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <span className="w-3 h-0.5 inline-block rounded" style={{ background: s.color }} />
+            {s.name}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EconomicImpactWidget({ impact }: { impact: EconomicImpact }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const isPositive = impact.deltaRevenueDKK > 0;
+  const isNeutral = impact.deltaRevenueDKK === 0 || impact.currentChosenRate === 0;
+
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-zinc-500">Estimeret omsætningspåvirkning</span>
+          <button
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            className="w-4 h-4 rounded-full border border-zinc-700 text-zinc-500 text-xs flex items-center justify-center hover:border-zinc-500 hover:text-zinc-300 transition-colors relative"
+          >
+            ?
+            {showTooltip && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 shadow-xl z-20 text-left normal-case">
+                <p className="font-medium text-white mb-1">Estimeringsmetode</p>
+                <p className="text-zinc-400 leading-relaxed">
+                  Baseret på din Valgt-score ({impact.currentChosenRate}%) sammenlignet med branchemedianen ({impact.industryMedianChosenRate}%).
+                  Antager 200 AI-drevne leads/måned, 5% konvertering og gns. dealværdi på 50.000 DKK.
+                </p>
+              </div>
+            )}
+          </button>
+        </div>
+        {!isNeutral && (
+          <span className={`text-lg font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+            {isPositive ? '↑' : '↓'}
+          </span>
+        )}
+      </div>
+      <div className={`text-2xl font-bold ${isNeutral ? 'text-zinc-400' : isPositive ? 'text-green-400' : 'text-red-400'}`}>
+        {isNeutral
+          ? '—'
+          : `${isPositive ? '+' : ''}${impact.deltaRevenueDKK.toLocaleString('da-DK')} kr/md`}
+      </div>
+      <div className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{impact.interpretation}</div>
+      {!isNeutral && (
+        <div className="flex items-center gap-4 mt-3 text-xs text-zinc-600">
+          <span>Din Valgt%: <span className="text-zinc-400">{impact.currentChosenRate}%</span></span>
+          <span>Branche median: <span className="text-zinc-400">{impact.industryMedianChosenRate}%</span></span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DualCurveChart({ trend }: { trend: TrendPoint[] }) {
   if (trend.length < 2) return null;
   const w = 300;
-  const h = 80;
+  const h = 100;
+  const padTop = 10;
+  const padBottom = 4;
+  const drawH = h - padTop - padBottom;
 
   const maxMention = Math.max(...trend.map(t => t.mentionRate), 1);
   const maxChosen = Math.max(...trend.map(t => t.chosenRate), 1);
-  const maxVal = Math.max(maxMention, maxChosen, 1);
+  const maxVal = Math.max(maxMention, maxChosen, 20);
 
   const mentionPts = trend.map((t, i) => {
     const x = (i / (trend.length - 1)) * w;
-    const y = h - (t.mentionRate / maxVal) * h;
+    const y = padTop + drawH - (t.mentionRate / maxVal) * drawH;
     return `${x},${y}`;
   });
 
   const chosenPts = trend.map((t, i) => {
     const x = (i / (trend.length - 1)) * w;
-    const y = h - (t.chosenRate / maxVal) * h;
+    const y = padTop + drawH - (t.chosenRate / maxVal) * drawH;
     return `${x},${y}`;
   });
 
@@ -171,9 +351,14 @@ function DualCurveChart({ trend }: { trend: TrendPoint[] }) {
 
   return (
     <div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 100 }} preserveAspectRatio="none">
+        {/* Grid */}
+        {[0, 50, 100].filter(v => v <= maxVal + 5).map(v => {
+          const y = padTop + drawH - (v / maxVal) * drawH;
+          return <line key={v} x1={0} y1={y} x2={w} y2={y} stroke="#27272a" strokeWidth={1} />;
+        })}
         <path d={mentionPath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d={chosenPath} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4,2" />
+        <path d={chosenPath} fill="none" stroke="#6c63ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4,2" />
       </svg>
       <div className="flex items-center gap-4 mt-2">
         <div className="flex items-center gap-1.5 text-xs text-zinc-400">
@@ -181,7 +366,7 @@ function DualCurveChart({ trend }: { trend: TrendPoint[] }) {
           Nævnt-score
         </div>
         <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-          <span className="w-3 h-0.5 bg-violet-500 inline-block" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#8b5cf6 0,#8b5cf6 4px,transparent 4px,transparent 6px)' }} />
+          <span className="w-3 h-0.5 inline-block" style={{ background: 'repeating-linear-gradient(90deg,#6c63ff 0,#6c63ff 4px,transparent 4px,transparent 6px)' }} />
           Valgt-score
         </div>
       </div>
@@ -199,6 +384,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
   const [error, setError] = useState('');
   const [upsell, setUpsell] = useState<UpsellBanner | null>(null);
   const [upsellDismissed, setUpsellDismissed] = useState(false);
+  const [timeseries, setTimeseries] = useState<TimeseriesData | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -221,6 +407,13 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
     const interval = setInterval(fetchData, 30_000);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  useEffect(() => {
+    fetch(`/api/monitoring/timeseries?companyId=${id}&days=30`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTimeseries(d); })
+      .catch(() => {});
+  }, [id]);
 
   useEffect(() => {
     // Load upsell recommendation once on mount (every ~5th page load via session storage counter)
@@ -272,7 +465,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
     );
   }
 
-  const { company, stats, trend, bySystem, byType, alerts, recentResults } = data;
+  const { company, stats, economicImpact, trend, bySystem, byType, alerts, recentResults } = data;
   const unseenAlerts = alerts.filter(a => !a.seen);
   const avgSentiment = stats.avgSentiment ?? 0;
 
@@ -283,8 +476,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80">
-              <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center text-xs font-bold">AI</div>
-              <span className="font-semibold tracking-tight">AISignal</span>
+              <span className="font-bold tracking-tight text-lg leading-none"><span className="text-[#a78bfa]">AI</span><span className="text-[#e8e8f0]">Signal</span></span>
             </button>
             <span className="text-zinc-600">/</span>
             <span className="text-sm text-zinc-300">{company.name}</span>
@@ -334,7 +526,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8 pb-0">
         {/* Premium trial banner */}
         {company.trialActive && company.trialDaysLeft !== null && (
           <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-5 py-4 flex items-center justify-between gap-4">
@@ -426,11 +618,31 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
               <StatCard label="Analyser" value={stats.totalResults} sub={`${stats.runCount} kørsler`} />
             </div>
 
+            {/* Economic impact widget */}
+            {economicImpact && (
+              <EconomicImpactWidget impact={economicImpact} />
+            )}
+
+            {/* Historik-graf per AI-system (30 dage) */}
+            {timeseries && timeseries.dates.length > 1 && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-semibold text-white tracking-tight">Historik — Nævnt% per AI-system</h2>
+                  <span className="text-xs text-zinc-500">Seneste 30 dage</span>
+                </div>
+                <SystemHistoryChart data={timeseries} />
+                <div className="flex justify-between text-xs text-zinc-600 mt-2">
+                  <span>{timeseries.dates[0]}</span>
+                  <span>{timeseries.dates[timeseries.dates.length - 1]}</span>
+                </div>
+              </div>
+            )}
+
             {/* Nævnt vs Valgt dual-curve chart */}
             {trend.length > 1 && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-zinc-300">Nævnt vs Valgt over tid</h2>
+                  <h2 className="text-base font-semibold text-white tracking-tight">Nævnt vs Valgt over tid</h2>
                   <span className="text-xs text-zinc-500">Seneste {trend.length} dage</span>
                 </div>
                 <DualCurveChart trend={trend} />
@@ -444,22 +656,36 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             {/* Alerts */}
             {alerts.length > 0 && (
               <div className="space-y-2">
-                <h2 className="text-sm font-semibold text-zinc-300">Alerts</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-base font-semibold text-white tracking-tight">Alerts</h2>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    unseenAlerts.length > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-zinc-800 text-zinc-500'
+                  }`}>
+                    {unseenAlerts.length > 0 ? `${unseenAlerts.length} ny` : `${alerts.length} total`}
+                  </span>
+                </div>
                 {alerts.map(a => (
                   <div
                     key={a.id}
-                    className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-3 ${
+                    className={`rounded-lg border text-sm flex items-start gap-3 overflow-hidden ${
                       isNegativeAlert(a.type)
-                        ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                        : 'border-green-500/30 bg-green-500/10 text-green-300'
+                        ? 'border-red-500/30 bg-red-500/5'
+                        : 'border-green-500/30 bg-green-500/5'
                     }`}
                   >
-                    <span className="shrink-0 mt-0.5">{isNegativeAlert(a.type) ? '↓' : '↑'}</span>
-                    <div className="flex-1">
-                      <span className="font-medium text-xs opacity-70 block mb-0.5">{ALERT_TYPE_LABELS[a.type] || a.type}</span>
-                      <span>{a.message}</span>
+                    <div className={`w-1 self-stretch shrink-0 ${isNegativeAlert(a.type) ? 'bg-red-500' : 'bg-green-500'}`} />
+                    <div className="flex items-start gap-3 flex-1 px-3 py-3">
+                      <span className={`shrink-0 mt-0.5 text-base font-bold ${isNegativeAlert(a.type) ? 'text-red-400' : 'text-green-400'}`}>
+                        {isNegativeAlert(a.type) ? '↓' : '↑'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className={`font-semibold text-xs tracking-wide uppercase block mb-0.5 ${isNegativeAlert(a.type) ? 'text-red-400' : 'text-green-400'}`}>
+                          {ALERT_TYPE_LABELS[a.type] || a.type}
+                        </span>
+                        <span className={`text-sm leading-relaxed ${isNegativeAlert(a.type) ? 'text-red-200' : 'text-green-200'}`}>{a.message}</span>
+                      </div>
+                      <span className="ml-auto shrink-0 text-xs text-zinc-500 mt-0.5">{a.created_at.split('T')[0]}</span>
                     </div>
-                    <span className="ml-auto shrink-0 text-xs opacity-60">{a.created_at.split('T')[0]}</span>
                   </div>
                 ))}
               </div>
@@ -468,7 +694,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             {/* Per-type breakdown */}
             {byType.length > 0 && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <h2 className="text-sm font-semibold text-zinc-300 mb-4">Analyse pr. testtype</h2>
+                <h2 className="text-base font-semibold text-white tracking-tight mb-4">Analyse pr. testtype</h2>
                 <div className="space-y-4">
                   {byType.map(t => (
                     <div key={t.type}>
@@ -490,7 +716,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             {/* AI system breakdown */}
             {bySystem.length > 0 && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <h2 className="text-sm font-semibold text-zinc-300 mb-4">AI-systemer</h2>
+                <h2 className="text-base font-semibold text-white tracking-tight mb-4">AI-systemer</h2>
                 <div className="space-y-3">
                   {bySystem.map(s => (
                     <div key={s.system} className="flex items-center gap-4 text-xs">
@@ -509,7 +735,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             {/* Recent results */}
             {recentResults.length > 0 && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-                <h2 className="text-sm font-semibold text-zinc-300 mb-4">Seneste resultater</h2>
+                <h2 className="text-base font-semibold text-white tracking-tight mb-4">Seneste resultater</h2>
                 <div className="space-y-2">
                   {recentResults.map(r => (
                     <div key={r.id} className="border border-zinc-800 rounded-lg overflow-hidden">
@@ -555,6 +781,28 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
           </>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-[#2a2a3a] mt-12 px-6 py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <span className="font-bold tracking-tight text-base"><span className="text-[#a78bfa]">AI</span><span className="text-[#e8e8f0]">Signal</span></span>
+              <p className="text-xs text-[#888898] mt-1">AI-synlighedsmonitorering for virksomheder.</p>
+              <p className="text-xs text-[#888898]">Udviklet af AI Institute ApS.</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[#888898]">
+              <span className="font-medium text-[#e8e8f0]">AI-familien</span>
+              <a href="https://aiscore.dk" className="hover:text-[#a78bfa] transition-colors">AIScore</a>
+              <a href="https://aisignal.dk" className="hover:text-[#a78bfa] transition-colors">AISignal</a>
+              <a href="https://aiselect.dk" className="hover:text-[#a78bfa] transition-colors">AISelect</a>
+            </div>
+          </div>
+          <div className="border-t border-[#2a2a3a] pt-4">
+            <p className="text-xs text-[#888898]">© 2026 AI Institute ApS · CVR 44690615 · AISignal™ er et varemærke tilhørende AI Institute ApS</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

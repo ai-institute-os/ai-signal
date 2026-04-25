@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const company = getCompanyByEmail(email);
+  const company = await getCompanyByEmail(email);
 
   if (!company) {
     // Constant-time response to prevent email enumeration
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     passwordValid = company.password === password;
     if (passwordValid) {
       const hashed = await bcrypt.hash(password, 12);
-      updateCompanyPassword(company.id, hashed);
+      await updateCompanyPassword(company.id, hashed);
     }
   }
 

@@ -11,12 +11,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'companyId er påkrævet.' }, { status: 400 });
   }
 
-  const company = getCompany(companyId);
+  const company = await getCompany(companyId);
   if (!company) {
     return NextResponse.json({ error: 'Virksomhed ikke fundet.' }, { status: 404 });
   }
 
-  const { recommendation, count } = getNextUpsellRecommendation(companyId);
+  const { recommendation, count } = await getNextUpsellRecommendation(companyId);
 
   const content =
     recommendation === 'aiscore'
