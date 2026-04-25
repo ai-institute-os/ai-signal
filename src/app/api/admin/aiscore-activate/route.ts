@@ -1,14 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { getCompany, getCompanyByEmail, activateAISignalPremiumTrial, createCompany } from '@/lib/db';
 import { sendTrialWelcomeEmail } from '@/lib/email';
+import { requireAdminAuth } from '@/lib/admin-auth';
+
+const PASSWORD_CHARSET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
+// Rejection sampling: discard bytes in the biased tail to ensure uniform distribution.
+const MAX_USABLE_BYTE = 256 - (256 % PASSWORD_CHARSET.length);
+
+function generateSecurePassword(length: number): string {
+  let password = '';
+  while (password.length < length) {
+    const buf = randomBytes(length * 2);
+    for (let i = 0; i < buf.length && password.length < length; i++) {
+      if (buf[i] < MAX_USABLE_BYTE) {
+        password += PASSWORD_CHARSET[buf[i] % PASSWORD_CHARSET.length];
+      }
+    }
+  }
+  return password;
+}
 
 // Called after AIScore review call to grant 3-month free premium trial on AISignal.
 // If the company does not yet have an AISignal account it is created automatically.
 // Requires ADMIN_SECRET header to prevent unauthorized access.
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-admin-secret');
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
+  const authError = requireAdminAuth(req);
+  if (authError) return authError;
+
+  // Legacy block replaced by requireAdminAuth above — kept as dead code sentinel
+  // to make merge conflicts obvious if this block is re-introduced.
+  if (false) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -33,12 +56,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Generate a random 12-character password.
-      const password = Array.from({ length: 12 }, () =>
-        'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#'[
-          Math.floor(Math.random() * 57)
-        ]
-      ).join('');
+      const password = generateSecurePassword(12);
 
       const newId = uuidv4();
       const cleanDomain = (domain || email.split('@')[1] || '').toLowerCase().trim();
