@@ -104,23 +104,26 @@ export async function sendVerificationEmail(
   }
 
   const verifyUrl = `${BASE_URL()}/api/subscribers/verify?token=${encodeURIComponent(verificationToken)}`;
-  const subject = `Bekræft din email — AISignal`;
+  const subject = `Bekræft din AISignal-tilmelding`;
 
   const body = `
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din email</h1>
-    <p style="margin:0 0 8px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-      Hej ${companyName} — du er næsten klar.
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din AISignal-tilmelding</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+      Tak fordi du tilmeldte dig AISignal.
     </p>
     <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
-      Klik på knappen nedenfor for at bekræfte din email og aktivere din AISignal-overvågning. Linket udløber om 24 timer.
+      Klik på knappen herunder for at bekræfte din email-adresse.
     </p>
-    ${ctaButton(verifyUrl, 'Bekræft email og aktiver →')}
-    <p style="margin:20px 0 0;font-size:12px;color:#52525b;line-height:1.6;">
-      Hvis du ikke har oprettet en konto på AISignal, kan du ignorere denne email.
+    ${ctaButton(verifyUrl, 'Bekræft email')}
+    <p style="margin:24px 0 0;font-size:14px;color:#71717a;line-height:1.6;">
+      Når du har bekræftet, sender vi dig en velkomst med info om, hvad du modtager fremover.
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#52525b;line-height:1.6;">
+      Har du ikke tilmeldt dig? Se bort fra denne email.
     </p>`;
 
   const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Bekræft din AISignal-email\n\nKlik her for at aktivere din overvågning:\n${verifyUrl}\n\nLinket udløber om 24 timer.\n\n© 2026 AISignal`;
+  const text = `Bekræft din AISignal-tilmelding\n\nTak fordi du tilmeldte dig AISignal.\n\nKlik her for at bekræfte din email-adresse:\n${verifyUrl}\n\nNår du har bekræftet, sender vi dig en velkomst med info om, hvad du modtager fremover.\n\nHar du ikke tilmeldt dig? Se bort fra denne email.\n\n© 2026 AISignal`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -277,29 +280,25 @@ export async function sendWelcomeEmail(
   }
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
-  const subject = `AISignal er aktiv for ${companyName}`;
+  const subject = `Du er tilmeldt AISignal — her er hvad der sker`;
+  const token = await signSubscriberToken(companyId);
+  const prefsUrl = `${BASE_URL()}/preferences?token=${encodeURIComponent(token)}`;
 
   const body = `
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til AISignal</h1>
-    <p style="margin:0 0 8px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-      Overvågning af <strong style="color:#d4d4d8;">${companyName}</strong> er nu aktiv.
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til AISignal.</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+      Hver uge sender vi dig en kort AI-opdatering: de vigtigste bevægelser, de relevante signaler, og hvad det betyder i praksis. Ingen støj — kun det der rykker.
     </p>
     <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
-      Vi sender automatisk prompts til AI-systemer og måler om din virksomhed nævnes og vælges. Din første analyse er klar om få minutter.
+      Din første alert ankommer til næste udsendelse.
     </p>
-    <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
-      <p style="margin:0 0 8px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Hvad sker der nu</p>
-      <ul style="margin:0;padding:0 0 0 16px;font-size:13px;color:#a1a1aa;line-height:1.8;">
-        <li>Vi stiller strukturerede prompts til ChatGPT om din virksomhed</li>
-        <li>Vi måler om du nævnes og vælges</li>
-        <li>Du får automatisk alerts ved vigtige ændringer</li>
-        <li>Overvågning kører automatisk — du behøver ikke gøre noget</li>
-      </ul>
-    </div>
-    ${ctaButton(dashboardUrl, 'Se dit dashboard →')}`;
+    ${ctaButton(dashboardUrl, 'Se dit dashboard →')}
+    <p style="margin:24px 0 0;font-size:14px;color:#71717a;line-height:1.6;">
+      Vil du ændre dine præferencer eller afmelde dig, kan du gøre det her: <a href="${prefsUrl}" style="color:#a78bfa;text-decoration:none;">Administrer indstillinger</a>
+    </p>`;
 
   const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Velkommen til AISignal!\n\nOvervågning af ${companyName} er nu aktiv. Se dit dashboard: ${dashboardUrl}`;
+  const text = `Du er tilmeldt AISignal — her er hvad der sker\n\nVelkommen til AISignal.\n\nHver uge sender vi dig en kort AI-opdatering: de vigtigste bevægelser, de relevante signaler, og hvad det betyder i praksis. Ingen støj — kun det der rykker.\n\nDin første alert ankommer til næste udsendelse.\n\nVil du ændre dine præferencer eller afmelde dig, kan du gøre det her: ${prefsUrl}\n\n© 2026 AISignal`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
