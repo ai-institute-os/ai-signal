@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { signSubscriberToken } from '@/lib/auth';
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'AISignal <alerts@aisignal.dk>';
 
@@ -10,7 +11,15 @@ function getResend(): Resend | null {
 
 const BASE_URL = () => process.env.NEXT_PUBLIC_BASE_URL || 'https://aisignal.dk';
 
-function emailWrapper(subject: string, bodyHtml: string, footerNote: string): string {
+async function subscriberFooter(companyId: string): Promise<string> {
+  const token = await signSubscriberToken(companyId);
+  const base = BASE_URL();
+  const unsubUrl = `${base}/api/unsubscribe?token=${encodeURIComponent(token)}`;
+  const prefsUrl = `${base}/preferences?token=${encodeURIComponent(token)}`;
+  return `<a href="${prefsUrl}" style="color:#52525b;text-decoration:none;">Indstillinger</a> · <a href="${unsubUrl}" style="color:#52525b;text-decoration:none;">Afmeld</a>`;
+}
+
+function emailWrapper(subject: string, bodyHtml: string, footerNote: string, footerLinks?: string): string {
   return `<!DOCTYPE html>
 <html lang="da">
 <head>
@@ -46,7 +55,7 @@ function emailWrapper(subject: string, bodyHtml: string, footerNote: string): st
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0;font-size:11px;color:#3f3f46;">
                 ${footerNote}<br>
-                © 2026 AISignal · AI-synlighedsmonitorering
+                © 2026 AISignal · AI-synlighedsmonitorering${footerLinks ? `<br><span style="margin-top:6px;display:inline-block;">${footerLinks}</span>` : ''}
               </p>
             </td>
           </tr>
@@ -90,6 +99,7 @@ export async function sendAlertEmail(
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
   const subject = customSubject || `Vigtig ændring i din AI-synlighed — ${companyName}`;
   const textBody = structuredBody || alertMessage;
+  const footerLinks = await subscriberFooter(companyId);
 
   const htmlBody = textBody
     .split('\n')
@@ -116,7 +126,7 @@ export async function sendAlertEmail(
     </div>
     ${ctaButton(dashboardUrl, 'Se dit dashboard →')}`;
 
-  const html = emailWrapper(subject, body, `Du modtager denne besked fordi du er tilmeldt AISignal-overvågning for ${companyName}.`);
+  const html = emailWrapper(subject, body, `Du modtager denne besked fordi du er tilmeldt AISignal-overvågning for ${companyName}.`, footerLinks);
   const text = `AISignal — ${subject}\n\n${textBody}\n\n© 2026 AISignal`;
 
   try {
@@ -487,40 +497,60 @@ export async function sendWeeklyDigestEmail(
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
   const count = signals.length;
-  const subject = `⚡ ${companyName}: ${count} ny${count !== 1 ? 'e' : 't'} AI-signal${count !== 1 ? 'er' : ''} du bør reagere på`;
+  const subject = `⚡ ${companyName}: ${count} AI-signal${count !== 1 ? 'er' : ''} denne uge`;
+
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - 6);
+  const formatDate = (d: Date) => d.toLocaleDateString('da-DK', { day: 'numeric', month: 'long' });
+  const weekLabel = `${formatDate(weekStart)} til ${formatDate(now)}`;
 
   const signalRows = signals
     .map(
       (s) => `
     <tr>
-      <td style="padding:12px 0;border-bottom:1px solid #27272a;vertical-align:top;">
-        <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#d4d4d8;">${s.headline}</p>
+      <td style="padding:16px 0;border-bottom:1px solid #27272a;vertical-align:top;">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#d4d4d8;">${s.headline}</p>
+        <p style="margin:0 0 4px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Hvad det betyder for dig</p>
         <p style="margin:0;font-size:13px;color:#a1a1aa;line-height:1.6;">${s.consequence}</p>
       </td>
     </tr>`
     )
     .join('');
 
+  const samletVurdering = count === 1
+    ? 'Et signal kræver din opmærksomhed denne uge. Se detaljer i dit dashboard.'
+    : `${count} signaler kræver din opmærksomhed denne uge. Din AI-position har ændret sig på tværs af flere parametre.`;
+
   const body = `
-    <p style="margin:0 0 4px;font-size:12px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Ugentlig AI-rapport</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Ugentlig AI-positionsrapport</p>
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#fff;line-height:1.3;">
-      ${count} ny${count !== 1 ? 'e' : 't'} AI-signal${count !== 1 ? 'er' : ''} for ${companyName}
+      ${count} AI-signal${count !== 1 ? 'er' : ''} for ${companyName}
     </h1>
-    <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
-      AISignal har registreret ændringer i hvordan AI-systemer opfatter og anbefaler din virksomhed. Her er hvad det betyder for dig.
+    <p style="margin:0 0 24px;font-size:13px;color:#71717a;">${weekLabel}</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Hej,<br><br>
+      Her er din ugentlige AI-positionsrapport for <strong style="color:#d4d4d8;">${companyName}</strong>.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
       ${signalRows}
     </table>
-    ${ctaButton(dashboardUrl, 'Se fuldt dashboard →')}
+    <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
+      <p style="margin:0 0 6px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Samlet vurdering denne uge</p>
+      <p style="margin:0;font-size:13px;color:#d4d4d8;line-height:1.6;">${samletVurdering}</p>
+    </div>
+    ${ctaButton(dashboardUrl, 'Se fuld analyse i dashboard →')}
     <p style="margin:16px 0 0;font-size:12px;color:#3f3f46;line-height:1.6;">
       AISignal observerer og rapporterer — alle beslutninger er dine.
     </p>`;
 
-  const html = emailWrapper(subject, body, `Du modtager denne ugentlige rapport som AISignal-abonnent for ${companyName}.`);
+  const footerLinks = await subscriberFooter(companyId);
+  const html = emailWrapper(subject, body, `Du modtager denne ugentlige rapport som AISignal-abonnent for ${companyName}.`, footerLinks);
 
-  const textLines = signals.map((s) => `• ${s.headline}\n  → ${s.consequence}`).join('\n\n');
-  const text = `⚡ ${subject}\n\n${textLines}\n\nSe dashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const textLines = signals
+    .map((s) => `• ${s.headline}\n  Hvad det betyder for dig: ${s.consequence}`)
+    .join('\n\n');
+  const text = `⚡ ${subject}\n\n${weekLabel}\n\n${textLines}\n\nSamlet vurdering: ${samletVurdering}\n\nSe fuld analyse: ${dashboardUrl}\n\n© 2026 AISignal`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });

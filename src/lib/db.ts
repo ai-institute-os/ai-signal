@@ -47,7 +47,10 @@ async function initSchema(db: Client): Promise<void> {
       stripe_price_id TEXT,
       upsell_email_sent INTEGER NOT NULL DEFAULT 0,
       trial_warning_10_sent INTEGER NOT NULL DEFAULT 0,
-      trial_warning_2_sent INTEGER NOT NULL DEFAULT 0
+      trial_warning_2_sent INTEGER NOT NULL DEFAULT 0,
+      alert_frequency TEXT NOT NULL DEFAULT 'weekly',
+      subscriber_status TEXT NOT NULL DEFAULT 'active',
+      paused_until TEXT
     );
 
     CREATE TABLE IF NOT EXISTS monitoring_runs (
@@ -87,6 +90,20 @@ async function initSchema(db: Client): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_results_company ON monitoring_results(company_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_alerts_company ON alerts(company_id, seen);
   `);
+
+  // Migrations for existing databases
+  const migrations = [
+    `ALTER TABLE companies ADD COLUMN alert_frequency TEXT NOT NULL DEFAULT 'weekly'`,
+    `ALTER TABLE companies ADD COLUMN subscriber_status TEXT NOT NULL DEFAULT 'active'`,
+    `ALTER TABLE companies ADD COLUMN paused_until TEXT`,
+  ];
+  for (const sql of migrations) {
+    try {
+      await db.execute({ sql, args: [] });
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }
 
 // Row → typed object helpers
@@ -110,6 +127,9 @@ function parseCompanyRow(row: Record<string, unknown>): Company {
     stripe_subscription_id: (row.stripe_subscription_id as string | null) ?? null,
     stripe_subscription_status: (row.stripe_subscription_status as string | null) ?? null,
     stripe_price_id: (row.stripe_price_id as string | null) ?? null,
+    alert_frequency: ((row.alert_frequency as string) || 'weekly') as 'weekly' | 'monthly',
+    subscriber_status: ((row.subscriber_status as string) || 'active') as 'active' | 'paused' | 'unsubscribed',
+    paused_until: (row.paused_until as string | null) ?? null,
   };
 }
 
@@ -132,6 +152,9 @@ export interface Company {
   stripe_subscription_id: string | null;
   stripe_subscription_status: string | null;
   stripe_price_id: string | null;
+  alert_frequency: 'weekly' | 'monthly';
+  subscriber_status: 'active' | 'paused' | 'unsubscribed';
+  paused_until: string | null;
 }
 
 export interface MonitoringRun {
@@ -473,11 +496,39 @@ export async function markTrialWarningSent(companyId: string, daysLeft: number):
 export async function getCompaniesNeedingRun(olderThanHours: number): Promise<Company[]> {
   const db = await ensureInit();
   const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
+  // Monthly cutoff: ~28 days to be safe
+  const monthlyCutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+
   const r = await db.execute({
-    sql: `SELECT c.* FROM companies c WHERE c.status = 'active' AND (NOT EXISTS (SELECT 1 FROM monitoring_runs r WHERE r.company_id = c.id AND r.status = 'done' AND r.created_at > ?)) ORDER BY c.created_at ASC`,
-    args: [cutoff],
+    sql: `SELECT c.* FROM companies c
+          WHERE c.status = 'active'
+            AND (c.subscriber_status IS NULL OR c.subscriber_status = 'active'
+                 OR (c.subscriber_status = 'paused' AND c.paused_until IS NOT NULL AND c.paused_until <= ?))
+            AND (
+              (COALESCE(c.alert_frequency, 'weekly') = 'weekly'
+               AND NOT EXISTS (SELECT 1 FROM monitoring_runs r WHERE r.company_id = c.id AND r.status = 'done' AND r.created_at > ?))
+              OR
+              (c.alert_frequency = 'monthly'
+               AND NOT EXISTS (SELECT 1 FROM monitoring_runs r WHERE r.company_id = c.id AND r.status = 'done' AND r.created_at > ?))
+            )
+          ORDER BY c.created_at ASC`,
+    args: [now, cutoff, monthlyCutoff],
   });
-  return r.rows.map(row => parseCompanyRow(row as Record<string, unknown>));
+
+  // Auto-unpause companies whose pause period has expired
+  const companies = r.rows.map(row => parseCompanyRow(row as Record<string, unknown>));
+  for (const c of companies) {
+    if (c.subscriber_status === 'paused' && c.paused_until && c.paused_until <= now) {
+      await db.execute({
+        sql: `UPDATE companies SET subscriber_status = 'active', paused_until = NULL WHERE id = ?`,
+        args: [c.id],
+      });
+      c.subscriber_status = 'active';
+      c.paused_until = null;
+    }
+  }
+  return companies;
 }
 
 // Timeseries queries used by /api/monitoring/timeseries
@@ -540,4 +591,26 @@ export async function getCompanyPeriodStats(
     chosenRate: (row.chosenRate as number | null) ?? null,
     total: (row.total as number) || 0,
   };
+}
+
+export interface SubscriberPreferences {
+  alert_frequency: 'weekly' | 'monthly';
+  subscriber_status: 'active' | 'paused' | 'unsubscribed';
+  paused_until: string | null;
+}
+
+export async function updateSubscriberPreferences(
+  companyId: string,
+  prefs: Partial<SubscriberPreferences>
+): Promise<Company | null> {
+  const db = await ensureInit();
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  if (prefs.alert_frequency !== undefined) { sets.push('alert_frequency = ?'); vals.push(prefs.alert_frequency); }
+  if (prefs.subscriber_status !== undefined) { sets.push('subscriber_status = ?'); vals.push(prefs.subscriber_status); }
+  if (prefs.paused_until !== undefined) { sets.push('paused_until = ?'); vals.push(prefs.paused_until); }
+  if (sets.length === 0) return getCompany(companyId);
+  vals.push(companyId);
+  await db.execute({ sql: `UPDATE companies SET ${sets.join(', ')} WHERE id = ?`, args: vals as never[] });
+  return getCompany(companyId);
 }

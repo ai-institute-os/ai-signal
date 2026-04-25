@@ -26,3 +26,23 @@ export async function verifySession(token: string): Promise<{ companyId: string 
     return null;
   }
 }
+
+// Subscriber management tokens (for unsubscribe/preferences links in emails)
+export async function signSubscriberToken(companyId: string): Promise<string> {
+  return new SignJWT({ companyId, purpose: 'subscriber' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('365d')
+    .sign(JWT_SECRET);
+}
+
+export async function verifySubscriberToken(token: string): Promise<{ companyId: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    if (typeof payload.companyId !== 'string') return null;
+    if (payload.purpose !== 'subscriber') return null;
+    return { companyId: payload.companyId };
+  } catch {
+    return null;
+  }
+}
