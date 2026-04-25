@@ -10,6 +10,7 @@ import {
   getRunCount,
 } from './db';
 import { sendWeeklyDigestEmail, sendFirstReportReadyEmail } from './email';
+import { isPremium, FREE_TIER_SIGNAL_LIMIT } from './subscription';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = 'gpt-4o-mini';
@@ -258,9 +259,15 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
     throw new Error('No AI provider API keys configured (OPENAI_API_KEY, PERPLEXITY_API_KEY)');
   }
 
+  const premium = isPremium(company);
+  const signalLimit = premium ? Infinity : FREE_TIER_SIGNAL_LIMIT;
+
   try {
-    for (const provider of activeProviders) {
+    let signalCount = 0;
+    outer: for (const provider of activeProviders) {
       for (const spec of PROMPTS) {
+        if (signalCount >= signalLimit) break outer;
+
         const prompt = spec.buildPrompt(company);
         let response: string;
 
@@ -289,6 +296,8 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
           score,
           sentiment,
         });
+
+        signalCount++;
       }
     }
 

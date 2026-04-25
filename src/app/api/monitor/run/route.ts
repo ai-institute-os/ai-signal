@@ -3,6 +3,7 @@ import { getCompany, getLatestRunForCompany } from '@/lib/db';
 import { runMonitoringForCompany } from '@/lib/monitor';
 import { verifySession, COOKIE_NAME } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/ratelimit';
+import { getSubscriberTier, FREE_TIER_SIGNAL_LIMIT } from '@/lib/subscription';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,9 +42,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const tier = getSubscriberTier(company);
+
     // Run async — fire and forget, return runId immediately
     const runId = await runMonitoringForCompany(company);
-    return NextResponse.json({ runId, throttled: false });
+    return NextResponse.json({
+      runId,
+      throttled: false,
+      tier,
+      signalLimit: tier === 'free' ? FREE_TIER_SIGNAL_LIMIT : null,
+    });
   } catch (err) {
     console.error('Monitor run error:', err);
     return NextResponse.json({ error: 'Fejl ved start af monitorering.' }, { status: 500 });

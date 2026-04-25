@@ -780,6 +780,28 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             )}
           </>
         )}
+
+        {/* Premium upgrade CTA for free users */}
+        {company.plan === 'free' && !company.trialActive && stats.totalResults > 0 && (
+          <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-400 text-lg font-bold shrink-0">✦</div>
+              <div>
+                <div className="text-sm font-semibold text-violet-300 mb-1">Du er på gratis plan — 3 signaler per rapport</div>
+                <div className="text-xs text-zinc-400 leading-relaxed max-w-lg">
+                  Opgrader til Premium for ubegrænsede AI-signaler, branchefilter og valgfri rapportfrekvens.
+                  Premium-brugere ser op til 15× flere datapunkter per rapport og kan overvåge konkurrenter på tværs af alle AI-systemer.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push(`/dashboard/${id}/upgrade`)}
+              className="rounded-lg bg-violet-600 hover:bg-violet-500 px-5 py-2 text-xs font-semibold text-white transition-colors whitespace-nowrap shrink-0"
+            >
+              Opgrader til Premium
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Footer */}
