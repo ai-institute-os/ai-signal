@@ -106,7 +106,11 @@ async function callOpenAI(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content as string;
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== 'string') {
+    throw new Error('Unexpected response structure from openai/gpt-4o-mini');
+  }
+  return content;
 }
 
 async function callGemini(prompt: string): Promise<string> {
@@ -128,7 +132,11 @@ async function callGemini(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.candidates[0].content.parts[0].text as string;
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content || typeof content !== 'string') {
+    throw new Error('Unexpected response structure from google/gemini-1.5-flash');
+  }
+  return content;
 }
 
 async function callPerplexity(prompt: string): Promise<string> {
@@ -155,7 +163,11 @@ async function callPerplexity(prompt: string): Promise<string> {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content as string;
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== 'string') {
+    throw new Error('Unexpected response structure from perplexity/sonar');
+  }
+  return content;
 }
 
 interface ProviderConfig {
