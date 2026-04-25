@@ -25,6 +25,11 @@ async function getRawBody(req: NextRequest): Promise<Buffer> {
 
 export async function POST(req: NextRequest) {
   const sig = req.headers.get('stripe-signature');
+  if (!sig) {
+    console.error('Missing stripe-signature header');
+    return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+  }
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
   try {
     const rawBody = await getRawBody(req);
-    event = stripe.webhooks.constructEvent(rawBody, sig ?? '', webhookSecret);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature error:', err);
     return NextResponse.json({ error: 'Ugyldig signatur' }, { status: 400 });
