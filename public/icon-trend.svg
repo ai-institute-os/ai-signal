@@ -1,0 +1,34 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Chart frame: Y-axis -->
+  <path d="M8 42 L8 6" stroke="#00D4FF" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.45"/>
+  <!-- Chart frame: X-axis -->
+  <path d="M8 42 L44 42" stroke="#00D4FF" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.45"/>
+  <!-- Subtle horizontal grid -->
+  <line x1="8" y1="31" x2="44" y2="31" stroke="rgba(0,212,255,0.1)" stroke-width="1" stroke-dasharray="3 3"/>
+  <line x1="8" y1="20" x2="44" y2="20" stroke="rgba(0,212,255,0.1)" stroke-width="1" stroke-dasharray="3 3"/>
+  <!-- Chart area fill -->
+  <polygon
+    points="10,40 16,34 22,37 28,27 34,22 40,14 40,42 10,42"
+    fill="rgba(0,212,255,0.07)"/>
+  <!-- Trend line -->
+  <polyline
+    points="10,40 16,34 22,37 28,27 34,22 40,14"
+    fill="none"
+    stroke="#00D4FF"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+  <!-- Data points -->
+  <circle cx="10" cy="40" r="2.5" fill="#00D4FF" opacity="0.3"/>
+  <circle cx="16" cy="34" r="2.5" fill="#00D4FF" opacity="0.45"/>
+  <circle cx="22" cy="37" r="2.5" fill="#00D4FF" opacity="0.55"/>
+  <circle cx="28" cy="27" r="2.5" fill="#00D4FF" opacity="0.7"/>
+  <circle cx="34" cy="22" r="2.5" fill="#00D4FF" opacity="0.85"/>
+  <!-- Endpoint: latest and highest -->
+  <circle cx="40" cy="14" r="6" fill="rgba(74,222,128,0.2)"/>
+  <circle cx="40" cy="14" r="4" fill="#0A1628" stroke="#4ADE80" stroke-width="2"/>
+  <circle cx="40" cy="14" r="1.8" fill="#4ADE80"/>
+  <!-- Upward arrow at top -->
+  <path d="M40 6 L40 10" stroke="#4ADE80" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M37.5 8.5 L40 6 L42.5 8.5" stroke="#4ADE80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

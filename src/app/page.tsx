@@ -36,36 +36,16 @@ const COUNTRIES = [
 
 const FAQ_ITEMS = [
   {
-    q: 'Hvad er AISignal?',
-    a: 'AISignal er en opdateringstjeneste, der holder dig informeret om det vigtigste, der sker inden for AI — uden at du selv skal følge med. Du modtager udvalgte opdateringer direkte i din indbakke.',
+    q: 'Er det virkelig gratis?',
+    a: 'Ja. Den gratis plan kræver hverken kreditkort eller binding. Du angiver din virksomhed og modtager ugentlige AI-overvågningsrapporter automatisk. Pro-funktioner lanceres på et tidspunkt — men gratis er gratis.',
   },
   {
-    q: 'Hvem får nytte af det?',
-    a: 'AISignal er lavet til danske virksomheder og selvstændige, der vil holde sig opdateret på AI uden at bruge timer på research. Uanset om du arbejder i marketing, økonomi, salg eller ledelse — AI udvikler sig hurtigt, og det er svært at følge med. Det er det, AISignal gør for dig.',
+    q: 'Hvad gør AISignal, som jeg ikke selv kan?',
+    a: 'Du kan spørge ChatGPT om din virksomhed én gang. AISignal gør det systematisk og ugentligt — på tværs af tre AI-modeller, med de spørgsmål rigtige brugere stiller. Og sender dig resultatet uden at du løfter en finger.',
   },
   {
-    q: 'Hvad slags AI-opdateringer får jeg?',
-    a: 'Du modtager opdateringer om nye funktioner, modeller og tendenser, der er relevante for virksomheder. Vi filtrerer støjen fra og sender kun det, der har praktisk betydning. Ingen teknisk jargon.',
-  },
-  {
-    q: 'Hvor tit får jeg opdateringer?',
-    a: 'Vi sender, når der er noget værd at vide. Det er ikke et dagligt nyhedsbrev — det er et signal, du kan stole på.',
-  },
-  {
-    q: 'Er det gratis?',
-    a: 'Ja. Det koster ingenting at tilmelde sig AISignal.',
-  },
-  {
-    q: 'Hvad sker der, når jeg tilmelder mig?',
-    a: 'Du modtager en bekræftelse pr. e-mail. Herefter sender vi dig AI-opdateringer, efterhånden som de er relevante. Ingen velkomstserie, ingen salgsmail — kun opdateringer.',
-  },
-  {
-    q: 'Kan jeg afmelde mig nemt?',
-    a: 'Ja. Alle mails indeholder et afmeldingslink. Ét klik, og du er ude.',
-  },
-  {
-    q: 'Hvilke AI-systemer overvåger AISignal?',
-    a: 'Vi følger de store platforme og modeller — herunder ChatGPT, Gemini, Claude og andre relevante tjenester. Når noget ændrer sig på en måde, der kan påvirke din hverdag, ved du det.',
+    q: 'Hvad kan jeg egentlig bruge det til?',
+    a: 'Du ser om AI anbefaler din virksomhed eller en konkurrent. Du opdager om din position forbedres eller forringes fra uge til uge. Og du kan reagere, inden det påvirker dine leads.',
   },
 ];
 
@@ -307,12 +287,12 @@ export default function LandingPage() {
               className="text-4xl sm:text-5xl xl:text-[3.5rem] font-extrabold leading-[1.08] mb-6"
               style={{ letterSpacing: '-0.03em' }}
             >
-              Ved du, hvad AI anbefaler{' '}
-              <span style={{ color: '#00D4FF' }}>om din virksomhed?</span>
+              AI anbefaler nogen i din kategori.{' '}
+              <span style={{ color: '#00D4FF' }}>Er det dig?</span>
             </h1>
 
             <p className="text-lg mb-10 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              Hver uge analyserer AISignal, hvordan ChatGPT, Gemini og Perplexity omtaler og anbefaler virksomheder i din kategori. Du får resultatet direkte i indbakken.
+              AISignal overvåger ugentligt, om ChatGPT, Gemini og Perplexity nævner og vælger din virksomhed — og sender resultatet direkte til dig.
             </p>
 
             {/* Email signup form */}
@@ -337,7 +317,7 @@ export default function LandingPage() {
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                Tilmeld gratis →
+                Start gratis →
               </button>
             </form>
 
@@ -394,53 +374,31 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>Produktet</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
-              Alt hvad du behøver for at vinde AI-synlighed
+              Tre ting du får, som du ikke kan få andre steder
             </h2>
             <p className="max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Fire kernefunktioner der holder dig foran konkurrenterne.
+              Automatisk, ugentligt og direkte i din indbakke.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
               {
-                icon: (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: '#00D4FF' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                  </svg>
-                ),
-                title: 'Ugentlig AI-overvågning',
-                body: 'Automatisk analyse af din synlighed på tværs af de mest anvendte AI-modeller — hver uge, uden manuel indsats.',
+                icon: '🔍',
+                title: 'Ugentlig AI-scanning',
+                body: 'Du ser om din virksomhed nævnes og vælges, når rigtige brugere stiller spørgsmål til ChatGPT, Gemini og Perplexity.',
                 pills: ['ChatGPT', 'Gemini', 'Perplexity'],
               },
               {
-                icon: (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: '#00D4FF' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
-                  </svg>
-                ),
-                title: 'Konsekvensformuleret indsigt',
-                body: 'Du får ikke rå data. Du får en klar status: om din position er stærk, ustabil eller svag — og hvad det konkret betyder for din virksomhed.',
-                pills: ['Stærk', 'Ustabil', 'Svag'],
+                icon: '📬',
+                title: 'Rapport i indbakken',
+                body: 'Ingen login, ingen dashboard. Resultatet ankommer som en læsbar rapport — klar til at handle på.',
+                pills: ['E-mail', 'Ugentlig', 'Ingen login'],
               },
               {
-                icon: (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: '#00D4FF' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                  </svg>
-                ),
-                title: 'Direkte i indbakken',
-                body: 'Ingen dashboard at logge ind på. Rapporten ankommer som en læsbar, struktureret opdatering — klar til at handle på.',
-                pills: ['E-mail', 'Ugentlig', 'Klar til brug'],
-              },
-              {
-                icon: (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} style={{ color: '#00D4FF' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
-                  </svg>
-                ),
-                title: 'Sammenligning over tid',
-                body: 'Se om din position forbedres eller forringes fra uge til uge. Fang ændringer, inden de påvirker din forretning.',
+                icon: '📊',
+                title: 'Position over tid',
+                body: 'Se om du vinder eller taber terræn uge for uge — inden det kan mærkes på bundlinjen.',
                 pills: ['Trend', 'Historik', 'Uge for uge'],
               },
             ].map((f) => (
@@ -449,12 +407,7 @@ export default function LandingPage() {
                 className="rounded-2xl p-6 flex flex-col gap-5"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
               >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)' }}
-                >
-                  {f.icon}
-                </div>
+                <div className="text-3xl">{f.icon}</div>
                 <div>
                   <h3 className="font-semibold text-white mb-2 text-sm">{f.title}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{f.body}</p>
@@ -571,10 +524,10 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>Priser</p>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
-              Simpel og gennemsigtig prissætning
+              Start gratis. Ingen overraskelser.
             </h2>
             <p className="max-w-lg mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Start gratis. Opgrader når du er klar.
+              Gratis er gratis. Pro er til dem, der vil vide mere end bare om de nævnes.
             </p>
           </div>
 
@@ -586,14 +539,14 @@ export default function LandingPage() {
             >
               <div>
                 <h3 className="font-bold text-xl text-white">Gratis</h3>
-                <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>Kom i gang uden betaling</p>
+                <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>Ingen kreditkort. Ingen binding.</p>
                 <p className="text-3xl font-extrabold text-white mt-5">0 kr<span className="text-base font-normal" style={{ color: 'rgba(255,255,255,0.4)' }}>/md</span></p>
               </div>
               <ul className="space-y-3 flex-1">
                 {[
                   'Ugentlig AI-overvågningsrapport',
-                  'Dækning af 3 AI-modeller',
-                  'Direkte levering til din indbakke',
+                  'ChatGPT, Gemini og Perplexity',
+                  'Rapport direkte i din indbakke',
                   'Ingen kreditkort påkrævet',
                 ].map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -628,15 +581,15 @@ export default function LandingPage() {
               </div>
               <div>
                 <h3 className="font-bold text-xl text-white">AISignal Pro</h3>
-                <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>For virksomheder der vil følge deres position tæt</p>
+                <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>Du ved ikke bare om du nævnes — du ved præcis, hvornår det begyndte at gå galt.</p>
                 <p className="text-base font-semibold text-white mt-5" style={{ color: 'rgba(255,255,255,0.5)' }}>Pris annonceres ved launch</p>
               </div>
               <ul className="space-y-3 flex-1">
                 {[
                   'Alt fra gratis',
-                  'Dækning af alle større AI-modeller',
-                  'Historisk sammenligning og trenddata',
-                  'Prioriteret support',
+                  'Historisk trendvisning uge for uge',
+                  'Konkurrentovervågning op til 3',
+                  'Tidlig adgang og prioriteret support',
                 ].map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
                     <span className="mt-0.5 shrink-0" style={{ color: '#00D4FF' }}>✓</span>
