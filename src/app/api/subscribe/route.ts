@@ -33,9 +33,11 @@ export async function POST(req: NextRequest) {
 
     const existing = await getNewsletterSubscriberByEmail(email);
 
+    const rateLimitHeaders = { 'X-RateLimit-Limit': '5' };
+
     if (existing) {
       if (existing.status === 'confirmed') {
-        return NextResponse.json({ ok: true, alreadyConfirmed: true });
+        return NextResponse.json({ ok: true, alreadyConfirmed: true }, { headers: rateLimitHeaders });
       }
       // Pending — resend confirmation
       const freshToken = crypto.randomUUID();
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
       sendNewsletterConfirmationEmail(email, existing.name, freshToken).catch((e) =>
         console.error('Resend newsletter confirmation error:', e)
       );
-      return NextResponse.json({ ok: true, pending: true });
+      return NextResponse.json({ ok: true, pending: true }, { headers: rateLimitHeaders });
     }
 
     const id = crypto.randomUUID();
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
       console.error('Newsletter confirmation email error:', e)
     );
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: rateLimitHeaders });
   } catch (err) {
     console.error('Subscribe error:', err);
     return NextResponse.json({ error: 'Intern fejl. Prøv igen.' }, { status: 500 });
