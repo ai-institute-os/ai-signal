@@ -111,7 +111,7 @@ export async function sendVerificationEmail(
     return;
   }
 
-  const verifyUrl = `${BASE_URL()}/api/subscribers/verify?token=${encodeURIComponent(verificationToken)}`;
+  const verifyUrl = `${BASE_URL()}/api/confirm?token=${encodeURIComponent(verificationToken)}`;
   const subject = `Bekræft din AISignal-tilmelding`;
 
   const body = `
@@ -879,6 +879,206 @@ export async function sendEmailUpdatedNewAddressConfirmation(
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ─── NEWSLETTER SUBSCRIBER EMAILS ─────────────────────────────────────────────
+
+function newsletterFooter(subscriberId: string): string {
+  const base = BASE_URL();
+  const unsubUrl = `${base}/afmeld-nyhedsbrev?id=${encodeURIComponent(subscriberId)}`;
+  return `<a href="${unsubUrl}" style="color:#52525b;text-decoration:none;">Afmeld nyhedsbrev</a>`;
+}
+
+export async function sendNewsletterConfirmationEmail(
+  toEmail: string,
+  name: string,
+  confirmationToken: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping newsletter confirmation email');
+    return;
+  }
+
+  const confirmUrl = `${BASE_URL()}/api/confirm?token=${encodeURIComponent(confirmationToken)}&type=newsletter`;
+  const subject = 'Bekræft din tilmelding til AISignal';
+  const greeting = name ? `Hej ${escapeHtml(name)},` : 'Hej,';
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din tilmelding</h1>
+    <p style="margin:0 0 8px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
+    <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+      Tak fordi du tilmeldte dig AISignal — det ugentlige nyhedsbrev om AI for danske virksomheder.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
+      Klik på knappen herunder for at bekræfte din email-adresse og aktivere din tilmelding.
+    </p>
+    ${ctaButton(confirmUrl, 'Bekræft tilmelding')}
+    <p style="margin:24px 0 0;font-size:12px;color:#52525b;line-height:1.6;">
+      Har du ikke tilmeldt dig AISignal? Se bort fra denne email — du modtager ikke flere.
+    </p>`;
+
+  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-nyheder for danske virksomheder');
+  const text = `Bekræft din tilmelding til AISignal\n\n${greeting}\n\nTak fordi du tilmeldte dig. Klik her for at bekræfte:\n${confirmUrl}\n\nHar du ikke tilmeldt dig? Se bort fra denne email.\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send newsletter confirmation email:', err);
+  }
+}
+
+export async function sendNewsletterWelcome1(
+  toEmail: string,
+  name: string,
+  subscriberId: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping newsletter welcome 1');
+    return;
+  }
+
+  const latestUrl = `${BASE_URL()}/udgaver/seneste`;
+  const subject = 'Velkommen til AISignal — her er hvad der venter dig';
+  const greeting = name ? `Hej ${escapeHtml(name)},` : 'Hej,';
+  const footer = newsletterFooter(subscriberId);
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til AISignal.</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
+    <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+      Du er nu tilmeldt AISignal — og vi er glade for at have dig med.
+    </p>
+    <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Hver tirsdag morgen kl. 07:00 lander der en ny udgave i din indbakke. Den er skrevet til dig der driver en dansk virksomhed og vil forstå, hvad kunstig intelligens faktisk betyder for din hverdag — uden at du skal have en teknisk baggrund for at følge med.
+    </p>
+    <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:24px;">
+      <p style="margin:0 0 8px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Hvad du kan forvente hver uge</p>
+      <ul style="margin:0;padding:0 0 0 16px;font-size:13px;color:#a1a1aa;line-height:1.8;">
+        <li>De AI-nyheder der er relevante for din type virksomhed — ikke de globale overskrifter, men det der påvirker dig</li>
+        <li>Konkrete tools du kan tage i brug, med ærlig vurdering af hvad de koster og hvad de kan</li>
+        <li>Vores fortolkning af, hvad bevægelserne i AI-landskabet betyder for din branche og konkurrenceevne</li>
+      </ul>
+    </div>
+    ${ctaButton(latestUrl, 'Se seneste udgave →')}
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;line-height:1.6;">
+      Vi skriver til dig én gang om ugen. Ikke mere. Afmeld til enhver tid med ét klik.
+    </p>
+    <p style="margin:16px 0 0;font-size:13px;color:#71717a;">— Teamet bag AISignal</p>`;
+
+  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig AISignal.', footer);
+  const text = `Velkommen til AISignal — her er hvad der venter dig\n\n${greeting}\n\nDu er nu tilmeldt AISignal.\n\nHver tirsdag morgen kl. 07:00 lander der en ny udgave i din indbakke.\n\nSe seneste udgave: ${latestUrl}\n\nVi skriver til dig én gang om ugen. Afmeld til enhver tid.\n\n— Teamet bag AISignal\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send newsletter welcome 1:', err);
+  }
+}
+
+export async function sendNewsletterWelcome2(
+  toEmail: string,
+  name: string,
+  subscriberId: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping newsletter welcome 2');
+    return;
+  }
+
+  const aiscoreUrl = 'https://aiscore.dk';
+  const subject = '3 AI-fakta de fleste danske SMV-ejere ikke kender';
+  const greeting = name ? `Hej ${escapeHtml(name)},` : 'Hej,';
+  const footer = newsletterFooter(subscriberId);
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">3 AI-fakta de fleste ikke kender</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Du er nu tre dage inde i dit AISignal-abonnement — og vi vil gerne give dig noget konkret at tænke over.
+    </p>
+    <div style="background:#27272a;border-radius:10px;padding:20px;margin-bottom:24px;">
+      <p style="margin:0 0 16px;font-size:14px;color:#d4d4d8;font-weight:600;line-height:1.5;">1. AI-modeller husker ikke hvem du er — men de har allerede en mening om din virksomhed.</p>
+      <p style="margin:0 0 20px;font-size:13px;color:#a1a1aa;line-height:1.6;">Når potentielle kunder bruger ChatGPT, Gemini eller Perplexity til at finde leverandører i din branche, analyserer disse systemer tusindvis af datasignaler om din virksomhed. De fleste virksomheder ved ikke, hvad AI'en siger om dem — og har ingen indflydelse på det.</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#d4d4d8;font-weight:600;line-height:1.5;">2. Over 40% af danske virksomheder bruger AI i dag — men under 10% har en strategi for det.</p>
+      <p style="margin:0 0 20px;font-size:13px;color:#a1a1aa;line-height:1.6;">Det betyder, at de fleste bruger AI til ad hoc-opgaver. De der systematiserer det, opnår markant kortere arbejdstider og lavere fejlrate på gentagne processer.</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#d4d4d8;font-weight:600;line-height:1.5;">3. AI erstatter ikke din branche — men det ændrer hvad kunderne forventer af dig.</p>
+      <p style="margin:0;font-size:13px;color:#a1a1aa;line-height:1.6;">Kunder der har prøvet AI-assisterede løsninger forventer hurtigere svar, mere personalisering og tydeligere kommunikation. Det sætter barren for hvad "god service" betyder.</p>
+    </div>
+    <p style="margin:0 0 20px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Disse tre mønstre er baggrunden for et produkt vi har udviklet: AIScore — en analyse af din virksomheds synlighed og position i AI-modellernes anbefalingssystemer.
+    </p>
+    ${ctaButton(aiscoreUrl, 'Hvad er AIScore? →')}
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;">Næste udgave af AISignal udkommer tirsdag.</p>
+    <p style="margin:12px 0 0;font-size:13px;color:#71717a;">— Teamet bag AISignal</p>`;
+
+  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig AISignal.', footer);
+  const text = `3 AI-fakta de fleste danske SMV-ejere ikke kender\n\n${greeting}\n\n1. AI-modeller husker ikke hvem du er — men de har allerede en mening om din virksomhed.\n\n2. Over 40% af danske virksomheder bruger AI i dag — men under 10% har en strategi for det.\n\n3. AI erstatter ikke din branche — men det ændrer hvad kunderne forventer af dig.\n\nLæs mere om AIScore: ${aiscoreUrl}\n\n— Teamet bag AISignal\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send newsletter welcome 2:', err);
+  }
+}
+
+export async function sendNewsletterWelcome3(
+  toEmail: string,
+  name: string,
+  subscriberId: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping newsletter welcome 3');
+    return;
+  }
+
+  const aiscoreUrl = 'https://aiscore.dk';
+  const subject = 'Hvad er din virksomheds AI-modenhedsscore?';
+  const greeting = name ? `Hej ${escapeHtml(name)},` : 'Hej,';
+  const footer = newsletterFooter(subscriberId);
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Hvad er din virksomheds AI-modenhedsscore?</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Det er en uge siden du tilmeldte dig AISignal. Du har nu set, hvad vi skriver om — og vi håber det har givet dig nyt perspektiv på AI i en dansk virksomhedskontekst.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Vi vil gerne introducere dig til noget konkret.
+    </p>
+    <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:10px;padding:20px;margin-bottom:24px;">
+      <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#d4d4d8;">AIScore</p>
+      <p style="margin:0 0 12px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+        En analyse der kortlægger præcis, hvordan de store AI-modeller — ChatGPT, Gemini, Perplexity og andre — aktuelt opfatter og omtaler din virksomhed.
+      </p>
+      <p style="margin:0 0 12px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+        Ikke hvad du tror de siger. Hvad de faktisk siger, når rigtige brugere stiller spørgsmål om din branche, dine ydelser og dine konkurrenter.
+      </p>
+      <p style="margin:0 0 8px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Rapporten viser</p>
+      <ul style="margin:0;padding:0 0 0 16px;font-size:13px;color:#a1a1aa;line-height:1.8;">
+        <li>Hvor synlig din virksomhed er i AI-anbefalingssystemer</li>
+        <li>Hvor stærk din position er i forhold til konkurrenter i din kategori</li>
+        <li>Hvad der strukturelt holder dig tilbage fra at blive foretrukket frem for en anden</li>
+      </ul>
+    </div>
+    <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      Analysen er ikke et dashboard. Den er ikke en tjekliste. Den er en strategisk diagnose — skrevet til dig der vil forstå din virksomheds reelle AI-position.
+    </p>
+    ${ctaButton(aiscoreUrl, 'Se hvad en AIScore-rapport indeholder →')}
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;">Vi fortsætter med at sende dig AISignal hver tirsdag. Du hører fra os igen om fire dage.</p>
+    <p style="margin:12px 0 0;font-size:13px;color:#71717a;">— Teamet bag AISignal</p>`;
+
+  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig AISignal.', footer);
+  const text = `Hvad er din virksomheds AI-modenhedsscore?\n\n${greeting}\n\nAIScore kortlægger præcis, hvordan de store AI-modeller aktuelt opfatter og omtaler din virksomhed.\n\nSe hvad en AIScore-rapport indeholder: ${aiscoreUrl}\n\n— Teamet bag AISignal\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send newsletter welcome 3:', err);
+  }
 }
 
 export async function sendEmailChangeVerificationEmail(

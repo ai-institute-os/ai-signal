@@ -54,7 +54,9 @@ async function initSchema(db: Client): Promise<void> {
       verification_token TEXT,
       email_verified INTEGER NOT NULL DEFAULT 1,
       branche TEXT NOT NULL DEFAULT '',
-      ai_emner TEXT NOT NULL DEFAULT '[]'
+      ai_emner TEXT NOT NULL DEFAULT '[]',
+      preferences_json TEXT,
+      unsubscribed_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS monitoring_runs (
@@ -116,6 +118,38 @@ async function initSchema(db: Client): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status, published_at);
     CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
     CREATE INDEX IF NOT EXISTS idx_article_reads_company ON article_reads(company_id);
+
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'pending',
+      confirmation_token TEXT,
+      confirmed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS email_log (
+      id TEXT PRIMARY KEY,
+      subscriber_id TEXT NOT NULL,
+      email_type TEXT NOT NULL,
+      sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+      status TEXT NOT NULL DEFAULT 'sent'
+    );
+
+    CREATE TABLE IF NOT EXISTS scheduled_emails (
+      id TEXT PRIMARY KEY,
+      subscriber_id TEXT NOT NULL,
+      email_type TEXT NOT NULL,
+      scheduled_at TEXT NOT NULL,
+      sent_at TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscribers(email);
+    CREATE INDEX IF NOT EXISTS idx_newsletter_token ON newsletter_subscribers(confirmation_token);
+    CREATE INDEX IF NOT EXISTS idx_scheduled_emails_status ON scheduled_emails(status, scheduled_at);
+    CREATE INDEX IF NOT EXISTS idx_email_log_subscriber ON email_log(subscriber_id);
   `);
 
   // Migrations for existing databases
@@ -128,6 +162,8 @@ async function initSchema(db: Client): Promise<void> {
     `ALTER TABLE companies ADD COLUMN management_token TEXT`,
     `ALTER TABLE companies ADD COLUMN branche TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE companies ADD COLUMN ai_emner TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE companies ADD COLUMN preferences_json TEXT`,
+    `ALTER TABLE companies ADD COLUMN unsubscribed_at TEXT`,
   ];
   for (const sql of migrations) {
     try {
@@ -173,6 +209,8 @@ function parseCompanyRow(row: Record<string, unknown>): Company {
     management_token: (row.management_token as string | null) ?? null,
     branche: (row.branche as string) || '',
     ai_emner: JSON.parse((row.ai_emner as string) || '[]'),
+    preferences_json: row.preferences_json ? JSON.parse(row.preferences_json as string) as EmailPreferences : null,
+    unsubscribed_at: (row.unsubscribed_at as string | null) ?? null,
   };
 }
 
@@ -203,6 +241,8 @@ export interface Company {
   management_token: string | null;
   branche: string;
   ai_emner: string[];
+  preferences_json: EmailPreferences | null;
+  unsubscribed_at: string | null;
 }
 
 export interface MonitoringRun {
@@ -651,6 +691,37 @@ export async function getCompanyPeriodStats(
   };
 }
 
+export interface EmailPreferences {
+  categories: string[];
+  frequency: 'weekly' | 'monthly';
+}
+
+export async function updateEmailPreferences(
+  companyId: string,
+  prefs: EmailPreferences | null,
+  unsubscribedAt: string | null | undefined
+): Promise<Company | null> {
+  const db = await ensureInit();
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+
+  sets.push('preferences_json = ?');
+  vals.push(prefs ? JSON.stringify(prefs) : null);
+
+  if (unsubscribedAt !== undefined) {
+    sets.push('unsubscribed_at = ?');
+    vals.push(unsubscribedAt);
+    if (unsubscribedAt !== null) {
+      sets.push('subscriber_status = ?');
+      vals.push('unsubscribed');
+    }
+  }
+
+  vals.push(companyId);
+  await db.execute({ sql: `UPDATE companies SET ${sets.join(', ')} WHERE id = ?`, args: vals as never[] });
+  return getCompany(companyId);
+}
+
 export interface SubscriberPreferences {
   alert_frequency: 'weekly' | 'monthly';
   subscriber_status: 'active' | 'paused' | 'unsubscribed';
@@ -808,6 +879,138 @@ export async function updateArticleTags(id: string, tags: string[]): Promise<voi
 }
 
 export { ensureInit as getDb };
+
+// ─── NEWSLETTER SUBSCRIBERS ────────────────────────────────────────────────────
+
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  name: string;
+  status: 'pending' | 'confirmed';
+  confirmation_token: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+}
+
+function parseSubscriberRow(row: Record<string, unknown>): NewsletterSubscriber {
+  return {
+    id: row.id as string,
+    email: row.email as string,
+    name: (row.name as string) || '',
+    status: (row.status as 'pending' | 'confirmed') || 'pending',
+    confirmation_token: (row.confirmation_token as string | null) ?? null,
+    confirmed_at: (row.confirmed_at as string | null) ?? null,
+    created_at: row.created_at as string,
+  };
+}
+
+export async function createNewsletterSubscriber(
+  id: string,
+  email: string,
+  name: string,
+  confirmationToken: string
+): Promise<NewsletterSubscriber> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `INSERT INTO newsletter_subscribers (id, email, name, status, confirmation_token)
+          VALUES (?, ?, ?, 'pending', ?)`,
+    args: [id, email.toLowerCase().trim(), name.trim(), confirmationToken],
+  });
+  return (await getNewsletterSubscriberById(id))!;
+}
+
+export async function getNewsletterSubscriberById(id: string): Promise<NewsletterSubscriber | null> {
+  const db = await ensureInit();
+  const r = await db.execute({ sql: 'SELECT * FROM newsletter_subscribers WHERE id = ?', args: [id] });
+  if (r.rows.length === 0) return null;
+  return parseSubscriberRow(r.rows[0] as Record<string, unknown>);
+}
+
+export async function getNewsletterSubscriberByEmail(email: string): Promise<NewsletterSubscriber | null> {
+  const db = await ensureInit();
+  const r = await db.execute({
+    sql: 'SELECT * FROM newsletter_subscribers WHERE email = ?',
+    args: [email.toLowerCase().trim()],
+  });
+  if (r.rows.length === 0) return null;
+  return parseSubscriberRow(r.rows[0] as Record<string, unknown>);
+}
+
+export async function getNewsletterSubscriberByToken(token: string): Promise<NewsletterSubscriber | null> {
+  const db = await ensureInit();
+  const r = await db.execute({
+    sql: 'SELECT * FROM newsletter_subscribers WHERE confirmation_token = ?',
+    args: [token],
+  });
+  if (r.rows.length === 0) return null;
+  return parseSubscriberRow(r.rows[0] as Record<string, unknown>);
+}
+
+export async function confirmNewsletterSubscriber(id: string): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `UPDATE newsletter_subscribers SET status = 'confirmed', confirmed_at = datetime('now'), confirmation_token = NULL WHERE id = ?`,
+    args: [id],
+  });
+}
+
+export async function updateNewsletterConfirmationToken(id: string, token: string): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: 'UPDATE newsletter_subscribers SET confirmation_token = ? WHERE id = ?',
+    args: [token, id],
+  });
+}
+
+export async function logEmail(
+  id: string,
+  subscriberId: string,
+  emailType: string
+): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `INSERT INTO email_log (id, subscriber_id, email_type) VALUES (?, ?, ?)`,
+    args: [id, subscriberId, emailType],
+  });
+}
+
+export async function scheduleEmail(
+  id: string,
+  subscriberId: string,
+  emailType: string,
+  scheduledAt: string
+): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `INSERT INTO scheduled_emails (id, subscriber_id, email_type, scheduled_at) VALUES (?, ?, ?, ?)`,
+    args: [id, subscriberId, emailType, scheduledAt],
+  });
+}
+
+export async function getPendingScheduledEmails(now: string): Promise<Array<{ id: string; subscriber_id: string; email_type: string; scheduled_at: string }>> {
+  const db = await ensureInit();
+  const r = await db.execute({
+    sql: `SELECT id, subscriber_id, email_type, scheduled_at FROM scheduled_emails WHERE status = 'pending' AND scheduled_at <= ? LIMIT 50`,
+    args: [now],
+  });
+  return r.rows as unknown as Array<{ id: string; subscriber_id: string; email_type: string; scheduled_at: string }>;
+}
+
+export async function markScheduledEmailSent(id: string): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `UPDATE scheduled_emails SET status = 'sent', sent_at = datetime('now') WHERE id = ?`,
+    args: [id],
+  });
+}
+
+export async function markScheduledEmailFailed(id: string): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `UPDATE scheduled_emails SET status = 'failed' WHERE id = ?`,
+    args: [id],
+  });
+}
 
 export async function getActiveNewsletterSubscribers(): Promise<Company[]> {
   const db = await ensureInit();
