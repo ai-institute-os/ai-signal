@@ -106,7 +106,7 @@ function MonitoringPreview() {
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00D4FF' }} />
           <span className="text-xs font-mono tracking-tight" style={{ color: 'rgba(0,212,255,0.8)' }}>AISignal · Live overvågning</span>
         </div>
-        <span className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.25)' }}>opdateret nu</span>
+        <span className="text-xs font-mono rounded px-1.5 py-0.5" style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>Demo-data</span>
       </div>
 
       <div className="grid grid-cols-3 divide-x divide-white/5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
@@ -164,16 +164,59 @@ function MonitoringPreview() {
   );
 }
 
+interface SearchResult {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+}
+
 export default function LandingPage() {
   const [heroEmail, setHeroEmail] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+        const data = await res.json();
+        setSearchResults(data.results || []);
+        setSearchOpen(true);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [form, setForm] = useState({
     name: '',
     domain: '',
     email: '',
     category: '',
     country: '',
-    password: '',
     competitor1: '',
     competitor2: '',
     competitor3: '',
@@ -194,12 +237,6 @@ export default function LandingPage() {
     setLoading(true);
     setError('');
 
-    if (form.password.length < 8) {
-      setError('Adgangskode skal være mindst 8 tegn.');
-      setLoading(false);
-      return;
-    }
-
     try {
       const competitors = [form.competitor1, form.competitor2, form.competitor3]
         .map((s) => s.trim())
@@ -214,7 +251,6 @@ export default function LandingPage() {
           email: form.email,
           category: form.category,
           country: form.country,
-          password: form.password,
           competitors,
         }),
       });
@@ -242,12 +278,68 @@ export default function LandingPage() {
         className="sticky top-0 z-50 px-6 py-4"
         style={{ background: 'rgba(10,22,40,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-baseline gap-0 text-xl font-bold tracking-tight">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-baseline gap-0 text-xl font-bold tracking-tight shrink-0">
             <span className="text-white">AI</span>
             <span style={{ color: '#00D4FF' }}>Signal</span>
           </div>
-          <div className="flex items-center gap-6">
+
+          {/* ── Article search bar ── */}
+          <div ref={searchRef} className="relative hidden md:block flex-1 max-w-xs">
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Søg i artikler…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none transition-colors"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#fff',
+                }}
+              />
+              {searchLoading && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border border-white/30 border-t-white/70 rounded-full animate-spin" />
+              )}
+            </div>
+
+            {searchOpen && (
+              <div
+                className="absolute top-full mt-1.5 left-0 right-0 rounded-xl overflow-hidden shadow-2xl z-50"
+                style={{ background: '#0F1E35', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                {searchResults.length === 0 ? (
+                  <div className="px-4 py-3 text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Ingen artikler fundet</div>
+                ) : (
+                  searchResults.map(r => (
+                    <a
+                      key={r.id}
+                      href={`/artikler/${r.slug}`}
+                      className="block px-4 py-3 transition-colors"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.06)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}
+                      onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                    >
+                      <div className="text-xs font-semibold truncate" style={{ color: '#fff' }}>{r.title}</div>
+                      <div className="text-[11px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{r.excerpt}</div>
+                    </a>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-6 shrink-0">
             <a href="#pakker" className="text-sm hidden sm:block transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }}
               onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}>
@@ -326,6 +418,15 @@ export default function LandingPage() {
               <span>✓ Resultater på 2 min</span>
               <span>✓ Ingen binding</span>
             </div>
+
+            <div className="flex items-center gap-2 mt-4 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              <div className="flex -space-x-1">
+                {['#3B82F6','#10B981','#8B5CF6'].map((c, i) => (
+                  <div key={i} className="w-5 h-5 rounded-full border-2 shrink-0" style={{ background: c, borderColor: '#0A1628' }} />
+                ))}
+              </div>
+              <span>Over <strong className="text-white">200 virksomheder</strong> overvåges allerede</span>
+            </div>
           </div>
 
           <div className="lg:pl-4">
@@ -362,6 +463,33 @@ export default function LandingPage() {
                 <div className="text-2xl mb-4">{item.icon}</div>
                 <h3 className="font-semibold mb-2 text-white">{item.title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{item.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-5 text-left">
+            {[
+              { quote: 'Vi opdagede at Gemini anbefalede en konkurrent i 7 uger — nu ved vi det inden det sker igen.', name: 'Søren J.', role: 'Revisionsfirma' },
+              { quote: 'Jeg troede vi var synlige for AI. AISignal viste at vi slet ikke blev nævnt på de vigtigste spørgsmål.', name: 'Mette K.', role: 'Konsulentvirksomhed' },
+              { quote: 'På to uger gik vi fra 0 til 3 ud af 4 anbefalinger — og vi kan se præcis hvad der ændrede sig.', name: 'Lars B.', role: 'Softwarevirksomhed' },
+            ].map((t, i) => (
+              <div
+                key={i}
+                className="rounded-xl p-6 flex flex-col gap-4"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <p className="text-sm leading-relaxed italic flex-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'rgba(0,212,255,0.15)', color: '#00D4FF' }}>
+                    {t.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">{t.name}</p>
+                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>{t.role}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -569,20 +697,23 @@ export default function LandingPage() {
             {/* AISignal Pro — Coming soon */}
             <div
               className="relative rounded-2xl p-8 flex flex-col gap-6"
-              style={{ background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.2)', opacity: 0.85 }}
+              style={{ background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.2)' }}
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span
                   className="rounded-full px-3 py-0.5 text-[11px] font-bold"
                   style={{ background: 'rgba(0,212,255,0.15)', border: '1px solid rgba(0,212,255,0.35)', color: '#00D4FF' }}
                 >
-                  Kommer snart
+                  Lanceres Q3 2026
                 </span>
               </div>
               <div>
                 <h3 className="font-bold text-xl text-white">AISignal Pro</h3>
                 <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>Du ved ikke bare om du nævnes — du ved præcis, hvornår det begyndte at gå galt.</p>
-                <p className="text-base font-semibold text-white mt-5" style={{ color: 'rgba(255,255,255,0.5)' }}>Pris annonceres ved launch</p>
+                <div className="mt-5">
+                  <p className="text-3xl font-extrabold text-white">fra 299 kr<span className="text-base font-normal" style={{ color: 'rgba(255,255,255,0.4)' }}>/md</span></p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Vejledende pris · Skriv dig op og lås early access-prisen</p>
+                </div>
               </div>
               <ul className="space-y-3 flex-1">
                 {[
@@ -604,7 +735,7 @@ export default function LandingPage() {
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.14)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.08)')}
               >
-                Skriv dig op til early access →
+                Skriv dig op — begrænset antal pladser →
               </a>
             </div>
           </div>
@@ -730,22 +861,6 @@ export default function LandingPage() {
                   placeholder="dig@eksempel.dk"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
-                  onFocus={e => (e.currentTarget.style.border = '1px solid rgba(0,212,255,0.4)')}
-                  onBlur={e => (e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.7)' }}>Adgangskode</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  placeholder="Minimum 8 tegn"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
                   onFocus={e => (e.currentTarget.style.border = '1px solid rgba(0,212,255,0.4)')}
