@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   await updateCompany(company.id, { email: newEmail });
 
-  return htmlResponse(resultPage(true, 'Email-adresse opdateret', `Din AISignal-email for <strong>${escapeHtml(company.name)}</strong> er nu ændret til <strong>${escapeHtml(newEmail)}</strong>. Fremtidige alerts sendes til den nye adresse.`));
+  return htmlResponse(resultPage(true, 'Email-adresse opdateret', `Din AISignal-email for ${escapeHtml(company.name)} er nu ændret til ${escapeHtml(newEmail)}. Fremtidige alerts sendes til den nye adresse.`));
 }
 
 function htmlResponse(html: string, status = 200): NextResponse {
@@ -71,7 +71,7 @@ function resultPage(success: boolean, title: string, message: string): string {
                 <span style="font-size:24px;">${icon}</span>
               </div>
               <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">${escapeHtml(title)}</h1>
-              <p style="margin:0;font-size:14px;color:#a1a1aa;line-height:1.6;">${message}</p>
+              <p style="margin:0;font-size:14px;color:#a1a1aa;line-height:1.6;">${escapeHtml(message)}</p>
             </td>
           </tr>
           <tr>
