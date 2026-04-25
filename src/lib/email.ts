@@ -482,12 +482,155 @@ export async function sendUpsellEmail(
   }
 }
 
+type SignalLevel = 'Critical' | 'High' | 'Medium' | 'Low';
+
+interface WeeklySignal {
+  headline: string;
+  consequence: string;
+  level: SignalLevel;
+  sourceAI: string;
+}
+
+const LEVEL_CONFIG: Record<SignalLevel, { color: string; bg: string; border: string; label: string }> = {
+  Critical: { color: '#EF4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', label: 'KRITISK' },
+  High:     { color: '#F97316', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.35)', label: 'HØJ' },
+  Medium:   { color: '#EAB308', bg: 'rgba(234,179,8,0.12)',  border: 'rgba(234,179,8,0.35)',  label: 'MIDDEL' },
+  Low:      { color: '#22C55E', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.35)',  label: 'LAV' },
+};
+
+function weeklyEmailWrapper(subject: string, bodyHtml: string, footerNote: string, footerLinks?: string): string {
+  return `<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#060D1A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#060D1A;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding-bottom:28px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="background:linear-gradient(135deg,#00D4FF,#0099BB);border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
+                          <span style="color:#0A1628;font-weight:800;font-size:13px;">AI</span>
+                        </td>
+                        <td style="padding-left:10px;">
+                          <span style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-0.4px;">AISignal</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <span style="font-size:11px;color:#4A6080;text-transform:uppercase;letter-spacing:0.8px;">Ugentlig rapport</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#0A1628;border:1px solid rgba(0,212,255,0.15);border-radius:16px;overflow:hidden;">
+
+              <!-- Card top accent bar -->
+              <tr>
+                <td style="height:3px;background:linear-gradient(90deg,#00D4FF,#0099BB,transparent);display:block;"></td>
+              </tr>
+
+              <tr>
+                <td style="padding:32px 32px 28px;">
+                  ${bodyHtml}
+                </td>
+              </tr>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding-top:24px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#2A3F5A;line-height:1.8;">
+                ${footerNote}<br>
+                © 2026 AISignal · AI-synlighedsmonitorering
+                ${footerLinks ? `<br><span style="margin-top:6px;display:inline-block;">${footerLinks}</span>` : ''}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function weeklyCta(href: string, label: string): string {
+  return `<table cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="background:#00D4FF;border-radius:8px;">
+        <a href="${href}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:700;color:#0A1628;text-decoration:none;letter-spacing:-0.2px;">
+          ${label}
+        </a>
+      </td>
+    </tr>
+  </table>`;
+}
+
+function levelBadge(level: SignalLevel): string {
+  const cfg = LEVEL_CONFIG[level];
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.8px;color:${cfg.color};background:${cfg.bg};border:1px solid ${cfg.border};">${cfg.label}</span>`;
+}
+
+function signalCard(s: WeeklySignal, isLast: boolean): string {
+  const cfg = LEVEL_CONFIG[s.level];
+  const border = isLast ? 'none' : '1px solid rgba(0,212,255,0.08)';
+  return `
+  <tr>
+    <td style="padding:20px 0;border-bottom:${border};vertical-align:top;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-bottom:10px;">
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="vertical-align:middle;padding-right:8px;">${levelBadge(s.level)}</td>
+                <td style="vertical-align:middle;">
+                  <span style="font-size:11px;color:#4A6080;letter-spacing:0.4px;">${s.sourceAI}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:10px;">
+            <p style="margin:0;font-size:15px;font-weight:600;color:#E2E8F0;line-height:1.4;">${s.headline}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:rgba(0,212,255,0.05);border-left:3px solid ${cfg.color};border-radius:0 6px 6px 0;padding:10px 14px;">
+            <p style="margin:0 0 3px;font-size:10px;color:#4A6080;text-transform:uppercase;letter-spacing:0.6px;font-weight:600;">Konsekvens for dig</p>
+            <p style="margin:0;font-size:13px;color:#94A3B8;line-height:1.6;">${s.consequence}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>`;
+}
+
 // Sendes ugentligt når der er signifikante ændringer i AI-synlighed.
 export async function sendWeeklyDigestEmail(
   toEmail: string,
   companyName: string,
   companyId: string,
-  signals: Array<{ headline: string; consequence: string }>
+  signals: Array<WeeklySignal>
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
@@ -497,60 +640,67 @@ export async function sendWeeklyDigestEmail(
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
   const count = signals.length;
-  const subject = `⚡ ${companyName}: ${count} AI-signal${count !== 1 ? 'er' : ''} denne uge`;
+  const subject = `Ugentlig AI-opdatering for ${companyName}`;
 
   const now = new Date();
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - 6);
   const formatDate = (d: Date) => d.toLocaleDateString('da-DK', { day: 'numeric', month: 'long' });
-  const weekLabel = `${formatDate(weekStart)} til ${formatDate(now)}`;
+  const weekLabel = `${formatDate(weekStart)} – ${formatDate(now)}`;
+
+  const hasCritical = signals.some(s => s.level === 'Critical');
+  const hasHigh = signals.some(s => s.level === 'High');
+  const urgencyColor = hasCritical ? '#EF4444' : hasHigh ? '#F97316' : '#00D4FF';
+  const urgencyLabel = hasCritical ? 'Kritiske ændringer opdaget' : hasHigh ? 'Vigtige ændringer opdaget' : 'AI-position opdateret';
 
   const signalRows = signals
-    .map(
-      (s) => `
-    <tr>
-      <td style="padding:16px 0;border-bottom:1px solid #27272a;vertical-align:top;">
-        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#d4d4d8;">${s.headline}</p>
-        <p style="margin:0 0 4px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Hvad det betyder for dig</p>
-        <p style="margin:0;font-size:13px;color:#a1a1aa;line-height:1.6;">${s.consequence}</p>
-      </td>
-    </tr>`
-    )
+    .map((s, i) => signalCard(s, i === signals.length - 1))
     .join('');
 
   const samletVurdering = count === 1
-    ? 'Et signal kræver din opmærksomhed denne uge. Se detaljer i dit dashboard.'
-    : `${count} signaler kræver din opmærksomhed denne uge. Din AI-position har ændret sig på tværs af flere parametre.`;
+    ? 'Et signal kræver din opmærksomhed denne uge.'
+    : `${count} signaler kræver din opmærksomhed. Din AI-position har ændret sig på tværs af flere parametre.`;
 
   const body = `
-    <p style="margin:0 0 4px;font-size:12px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Ugentlig AI-positionsrapport</p>
-    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#fff;line-height:1.3;">
+    <!-- Eyebrow -->
+    <p style="margin:0 0 6px;font-size:11px;color:${urgencyColor};text-transform:uppercase;letter-spacing:0.8px;font-weight:700;">${urgencyLabel}</p>
+
+    <!-- Headline -->
+    <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#F0F6FF;line-height:1.25;letter-spacing:-0.5px;">
       ${count} AI-signal${count !== 1 ? 'er' : ''} for ${companyName}
     </h1>
-    <p style="margin:0 0 24px;font-size:13px;color:#71717a;">${weekLabel}</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      Hej,<br><br>
-      Her er din ugentlige AI-positionsrapport for <strong style="color:#d4d4d8;">${companyName}</strong>.
-    </p>
+    <p style="margin:0 0 28px;font-size:12px;color:#4A6080;">${weekLabel}</p>
+
+    <!-- Divider -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr><td style="height:1px;background:rgba(0,212,255,0.12);"></td></tr>
+    </table>
+
+    <!-- Signal cards -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
       ${signalRows}
     </table>
-    <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
-      <p style="margin:0 0 6px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Samlet vurdering denne uge</p>
-      <p style="margin:0;font-size:13px;color:#d4d4d8;line-height:1.6;">${samletVurdering}</p>
+
+    <!-- Summary box -->
+    <div style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px 20px;margin-bottom:28px;">
+      <p style="margin:0 0 6px;font-size:10px;color:#00D4FF;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;">Samlet vurdering</p>
+      <p style="margin:0;font-size:13px;color:#94A3B8;line-height:1.6;">${samletVurdering}</p>
     </div>
-    ${ctaButton(dashboardUrl, 'Se fuld analyse i dashboard →')}
-    <p style="margin:16px 0 0;font-size:12px;color:#3f3f46;line-height:1.6;">
+
+    <!-- CTA -->
+    ${weeklyCta(dashboardUrl, 'Se fuld analyse i dashboard →')}
+
+    <p style="margin:18px 0 0;font-size:11px;color:#2A3F5A;line-height:1.6;">
       AISignal observerer og rapporterer — alle beslutninger er dine.
     </p>`;
 
   const footerLinks = await subscriberFooter(companyId);
-  const html = emailWrapper(subject, body, `Du modtager denne ugentlige rapport som AISignal-abonnent for ${companyName}.`, footerLinks);
+  const html = weeklyEmailWrapper(subject, body, `Du modtager denne ugentlige rapport som AISignal-abonnent for ${companyName}.`, footerLinks);
 
   const textLines = signals
-    .map((s) => `• ${s.headline}\n  Hvad det betyder for dig: ${s.consequence}`)
+    .map((s) => `[${s.level}] ${s.headline}\nKilde: ${s.sourceAI}\nKonsekvens: ${s.consequence}`)
     .join('\n\n');
-  const text = `⚡ ${subject}\n\n${weekLabel}\n\n${textLines}\n\nSamlet vurdering: ${samletVurdering}\n\nSe fuld analyse: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const text = `Ugentlig AI-opdatering for ${companyName}\n\n${weekLabel}\n\n${textLines}\n\nSamlet vurdering: ${samletVurdering}\n\nSe fuld analyse: ${dashboardUrl}\n\n© 2026 AISignal`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });

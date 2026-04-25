@@ -298,6 +298,16 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
   return runId;
 }
 
+function formatAiSystems(results: { ai_system: string }[]): string {
+  const names = [...new Set(results.map(r => r.ai_system))].map(s => {
+    if (s.includes('openai')) return 'ChatGPT';
+    if (s.includes('google')) return 'Gemini';
+    if (s.includes('perplexity')) return 'Perplexity';
+    return s;
+  });
+  return names.join(' · ');
+}
+
 async function checkAndCreateAlerts(company: Company, currentRunId: string) {
   const runIds = await getLastTwoRunIds(company.id);
   if (runIds.length < 2) return; // Need at least 2 completed runs
@@ -311,7 +321,10 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
 
   if (currentResults.length === 0 || previousResults.length === 0) return;
 
-  const digestSignals: { headline: string; consequence: string }[] = [];
+  const allAiSystems = formatAiSystems(currentResults);
+
+  type SignalLevel = 'Critical' | 'High' | 'Medium' | 'Low';
+  const digestSignals: { headline: string; consequence: string; level: SignalLevel; sourceAI: string }[] = [];
 
   // 1. valgt_fald: Valgt-score falls >10 pp
   const currentChosenRate = (currentResults.filter(r => r.chosen).length / currentResults.length) * 100;
@@ -324,6 +337,8 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
     digestSignals.push({
       headline: msg,
       consequence: `Færre kunder vælger jer via AI. Det kan reducere antallet af uopfordrede henvendelser og forringer jeres synlighed i AI-drevne anbefalinger.`,
+      level: chosenDiff <= -20 ? 'High' : 'Medium',
+      sourceAI: allAiSystems,
     });
   }
 
@@ -344,6 +359,8 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
         digestSignals.push({
           headline: msg,
           consequence: `En konkurrent dominerer nu AI-anbefalingerne i jeres kategori. Det betyder at AI aktivt sender kunder til dem frem for jer.`,
+          level: 'High',
+          sourceAI: allAiSystems,
         });
         break; // One alert per run is enough
       }
@@ -361,6 +378,8 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
     digestSignals.push({
       headline: msg,
       consequence: `AI-systemer nævner jer sjældnere i relevante kategorier. Det øger risikoen for at potentielle kunder ikke opdager jer, når de søger løsninger via AI.`,
+      level: mentionDiff <= -25 ? 'High' : 'Medium',
+      sourceAI: allAiSystems,
     });
   }
 
@@ -374,6 +393,8 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
     digestSignals.push({
       headline: msg,
       consequence: `Tonen i AI-svar om jer er blevet mere negativ eller neutral. Det kan reducere konverteringsraten for kunder der undersøger jer via AI.`,
+      level: 'Medium',
+      sourceAI: allAiSystems,
     });
   }
 
@@ -388,9 +409,12 @@ async function checkAndCreateAlerts(company: Company, currentRunId: string) {
     if (wasInTop3 && !isInTop3) {
       const msg = `${company.name} er faldet ud af top-3 i direkte AI-valg`;
       await createAlert(uuidv4(), company.id, 'position_aendring', msg);
+      const directAiSystems = formatAiSystems(currentDirectChoice);
       digestSignals.push({
         headline: msg,
         consequence: `I er ikke længere i top-3 når AI anbefaler virksomheder i jeres kategori direkte. Det betyder at AI aktivt fraråder jer til nye kunder.`,
+        level: 'Critical',
+        sourceAI: directAiSystems || allAiSystems,
       });
     }
   }
