@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllActiveCompanies, getCompanyPeriodStats } from '@/lib/db';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // GET /api/admin/companies
 // Requires x-admin-secret header matching ADMIN_SECRET env var.
 // Returns all active companies with latest 7-day stats + trend vs prior week.
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-admin-secret');
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const authError = requireAdminAuth(req);
+  if (authError) return authError;
 
   try {
     const companies = await getAllActiveCompanies();

@@ -29,12 +29,6 @@ export async function POST(req: NextRequest) {
   const authError = requireAdminAuth(req);
   if (authError) return authError;
 
-  // Legacy block replaced by requireAdminAuth above — kept as dead code sentinel
-  // to make merge conflicts obvious if this block is re-introduced.
-  if (false) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const { companyId, email, name, domain, contactName } = await req.json();
 

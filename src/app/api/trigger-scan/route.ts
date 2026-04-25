@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompany, getCompanyByEmail, getAllActiveCompanies } from '@/lib/db';
 import { runMonitoringForCompany } from '@/lib/monitor';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // Admin-only endpoint for manually triggering a monitoring scan.
-// Requires Authorization: Bearer <ADMIN_SECRET> or Bearer <CRON_SECRET>.
+// Requires Authorization: Bearer <ADMIN_SECRET> (or x-admin-secret header).
+// CRON_SECRET is intentionally NOT accepted here — cron and admin credentials must stay separate.
 export const maxDuration = 300;
 
-function isAuthorized(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization');
-  const adminSecret = process.env.ADMIN_SECRET || process.env.CRON_SECRET;
-  if (!adminSecret) return false;
-  return authHeader === `Bearer ${adminSecret}`;
-}
-
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const authError = requireAdminAuth(req);
+  if (authError) return authError;
 
   let body: { companyId?: string; email?: string; all?: boolean };
   try {
