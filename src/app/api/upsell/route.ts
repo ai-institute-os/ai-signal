@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompany, getNextUpsellRecommendation } from '@/lib/db';
+import { verifySession, COOKIE_NAME } from '@/lib/auth';
 
 // Returns next upsell recommendation for a company.
 // Rotation logic:
@@ -9,6 +10,12 @@ export async function GET(req: NextRequest) {
   const companyId = req.nextUrl.searchParams.get('companyId');
   if (!companyId) {
     return NextResponse.json({ error: 'companyId er påkrævet.' }, { status: 400 });
+  }
+
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  const session = token ? await verifySession(token) : null;
+  if (!session || session.companyId !== companyId) {
+    return NextResponse.json({ error: 'Ikke autoriseret.' }, { status: 401 });
   }
 
   const company = await getCompany(companyId);
