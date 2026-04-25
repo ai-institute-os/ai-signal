@@ -91,8 +91,23 @@ async function initSchema(db: Client): Promise<void> {
       FOREIGN KEY (company_id) REFERENCES companies(id)
     );
 
+    CREATE TABLE IF NOT EXISTS articles (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      excerpt TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tags TEXT NOT NULL DEFAULT '[]',
+      author TEXT NOT NULL DEFAULT 'AISignal',
+      status TEXT NOT NULL DEFAULT 'published',
+      published_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_results_company ON monitoring_results(company_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_alerts_company ON alerts(company_id, seen);
+    CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status, published_at);
+    CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
   `);
 
   // Migrations for existing databases
@@ -698,4 +713,71 @@ export async function getCompanyByManagementToken(token: string): Promise<Compan
   });
   if (result.rows.length === 0) return null;
   return parseCompanyRow(result.rows[0] as Record<string, unknown>);
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  tags: string[];
+  author: string;
+  status: 'draft' | 'published';
+  published_at: string;
+  created_at: string;
+}
+
+function parseArticleRow(row: Record<string, unknown>): Article {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    slug: row.slug as string,
+    excerpt: row.excerpt as string,
+    content: row.content as string,
+    tags: JSON.parse((row.tags as string) || '[]'),
+    author: (row.author as string) || 'AISignal',
+    status: (row.status as 'draft' | 'published') || 'published',
+    published_at: row.published_at as string,
+    created_at: row.created_at as string,
+  };
+}
+
+export async function getArticleBySlug(slug: string): Promise<Article | null> {
+  const db = await ensureInit();
+  const result = await db.execute({
+    sql: "SELECT * FROM articles WHERE slug = ? AND status = 'published'",
+    args: [slug],
+  });
+  if (result.rows.length === 0) return null;
+  return parseArticleRow(result.rows[0] as Record<string, unknown>);
+}
+
+export async function getPublishedArticles(limit = 50): Promise<Article[]> {
+  const db = await ensureInit();
+  const result = await db.execute({
+    sql: "SELECT * FROM articles WHERE status = 'published' ORDER BY published_at DESC LIMIT ?",
+    args: [limit],
+  });
+  return result.rows.map(row => parseArticleRow(row as Record<string, unknown>));
+}
+
+export async function createArticle(article: Omit<Article, 'created_at'>): Promise<Article> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `INSERT INTO articles (id, title, slug, excerpt, content, tags, author, status, published_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      article.id,
+      article.title,
+      article.slug,
+      article.excerpt,
+      article.content,
+      JSON.stringify(article.tags),
+      article.author,
+      article.status,
+      article.published_at,
+    ],
+  });
+  return (await getArticleBySlug(article.slug))!;
 }
