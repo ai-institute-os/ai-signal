@@ -28,7 +28,8 @@ async function subscriberFooter(companyId: string): Promise<string> {
   const base = BASE_URL();
   const unsubUrl = `${base}/api/unsubscribe?token=${encodeURIComponent(token)}`;
   const prefsUrl = `${base}/preferences?token=${encodeURIComponent(token)}`;
-  return `<a href="${prefsUrl}" style="color:#52525b;text-decoration:none;">Indstillinger</a> · <a href="${unsubUrl}" style="color:#52525b;text-decoration:none;">Afmeld</a>`;
+  const manageUrl = `${base}/api/subscribers/manage?token=${encodeURIComponent(token)}`;
+  return `<a href="${manageUrl}" style="color:#52525b;text-decoration:none;">Administrer abonnement</a> · <a href="${prefsUrl}" style="color:#52525b;text-decoration:none;">Indstillinger</a> · <a href="${unsubUrl}" style="color:#52525b;text-decoration:none;">Afmeld</a>`;
 }
 
 function emailWrapper(subject: string, bodyHtml: string, footerNote: string, footerLinks?: string): string {
@@ -755,6 +756,44 @@ export async function sendWeeklyDigestEmail(
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
   } catch (err) {
     console.error('Failed to send weekly digest email:', err);
+  }
+}
+
+export async function sendEmailChangeVerificationEmail(
+  newEmail: string,
+  companyName: string,
+  companyId: string,
+  emailChangeToken: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping email change verification email');
+    return;
+  }
+
+  const confirmUrl = `${BASE_URL()}/api/subscribers/manage/confirm?token=${encodeURIComponent(emailChangeToken)}`;
+  const subject = `Bekræft din nye email-adresse — AISignal`;
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din nye email-adresse</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+      Du har bedt om at ændre din AISignal-email for <strong style="color:#d4d4d8;">${companyName}</strong> til denne adresse.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
+      Klik på knappen herunder for at bekræfte. Linket er gyldigt i 24 timer.
+    </p>
+    ${ctaButton(confirmUrl, 'Bekræft ny email-adresse')}
+    <p style="margin:24px 0 0;font-size:12px;color:#52525b;line-height:1.6;">
+      Har du ikke bedt om denne ændring? Se bort fra denne email — din nuværende adresse fortsætter uændret.
+    </p>`;
+
+  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
+  const text = `Bekræft din nye email-adresse — AISignal\n\nDu har bedt om at ændre din AISignal-email for ${companyName} til denne adresse.\n\nKlik her for at bekræfte (gyldigt i 24 timer):\n${confirmUrl}\n\nHar du ikke bedt om denne ændring? Se bort fra denne email.\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: newEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send email change verification email:', err);
   }
 }
 

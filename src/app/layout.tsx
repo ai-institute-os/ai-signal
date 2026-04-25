@@ -15,7 +15,25 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AISignal — Løbende AI-monitorering",
-  description: "Se hvad AI siger om din virksomhed. Automatisk, løbende overvågning af din AI-synlighed.",
+  description:
+    "Se hvad AI siger om din virksomhed. Automatisk, løbende overvågning af din AI-synlighed.",
+  icons: {
+    icon: "/favicon.svg",
+  },
+  openGraph: {
+    title: "AISignal — Løbende AI-monitorering",
+    description:
+      "Se hvad AI siger om din virksomhed. Automatisk, løbende overvågning af din AI-synlighed.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    url: "https://aisignal.dk",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AISignal — Løbende AI-monitorering",
+    description: "Se hvad AI siger om din virksomhed. Automatisk, løbende overvågning af din AI-synlighed.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({

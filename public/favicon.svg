@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="6" fill="#0A1628"/>
+  <!-- Bold A letter -->
+  <path d="M16 5 L24.5 26 H20.8 L18.8 21 H13.2 L11.2 26 H7.5 L16 5 Z
+           M16 11.5 L14.5 18.5 H17.5 Z" fill="white"/>
+  <!-- Signal pulse wave - cyan accent bottom right -->
+  <polyline points="19,26 21,22 23,28 25,20 27,26 29,26" fill="none" stroke="#00D4FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

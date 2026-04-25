@@ -46,3 +46,23 @@ export async function verifySubscriberToken(token: string): Promise<{ companyId:
     return null;
   }
 }
+
+export async function signEmailChangeToken(companyId: string, newEmail: string): Promise<string> {
+  return new SignJWT({ companyId, newEmail, purpose: 'email-change' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('24h')
+    .sign(JWT_SECRET);
+}
+
+export async function verifyEmailChangeToken(token: string): Promise<{ companyId: string; newEmail: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    if (typeof payload.companyId !== 'string') return null;
+    if (typeof payload.newEmail !== 'string') return null;
+    if (payload.purpose !== 'email-change') return null;
+    return { companyId: payload.companyId, newEmail: payload.newEmail };
+  } catch {
+    return null;
+  }
+}

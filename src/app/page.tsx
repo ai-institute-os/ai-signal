@@ -34,6 +34,41 @@ const COUNTRIES = [
   'Andet',
 ];
 
+const FAQ_ITEMS = [
+  {
+    q: 'Hvad er AISignal?',
+    a: 'AISignal er en opdateringstjeneste, der holder dig informeret om det vigtigste, der sker inden for AI — uden at du selv skal følge med. Du modtager udvalgte opdateringer direkte i din indbakke.',
+  },
+  {
+    q: 'Hvem får nytte af det?',
+    a: 'AISignal er lavet til danske virksomheder og selvstændige, der vil holde sig opdateret på AI uden at bruge timer på research. Uanset om du arbejder i marketing, økonomi, salg eller ledelse — AI udvikler sig hurtigt, og det er svært at følge med. Det er det, AISignal gør for dig.',
+  },
+  {
+    q: 'Hvad slags AI-opdateringer får jeg?',
+    a: 'Du modtager opdateringer om nye funktioner, modeller og tendenser, der er relevante for virksomheder. Vi filtrerer støjen fra og sender kun det, der har praktisk betydning. Ingen teknisk jargon.',
+  },
+  {
+    q: 'Hvor tit får jeg opdateringer?',
+    a: 'Vi sender, når der er noget værd at vide. Det er ikke et dagligt nyhedsbrev — det er et signal, du kan stole på.',
+  },
+  {
+    q: 'Er det gratis?',
+    a: 'Ja. Det koster ingenting at tilmelde sig AISignal.',
+  },
+  {
+    q: 'Hvad sker der, når jeg tilmelder mig?',
+    a: 'Du modtager en bekræftelse pr. e-mail. Herefter sender vi dig AI-opdateringer, efterhånden som de er relevante. Ingen velkomstserie, ingen salgsmail — kun opdateringer.',
+  },
+  {
+    q: 'Kan jeg afmelde mig nemt?',
+    a: 'Ja. Alle mails indeholder et afmeldingslink. Ét klik, og du er ude.',
+  },
+  {
+    q: 'Hvilke AI-systemer overvåger AISignal?',
+    a: 'Vi følger de store platforme og modeller — herunder ChatGPT, Gemini, Claude og andre relevante tjenester. Når noget ændrer sig på en måde, der kan påvirke din hverdag, ved du det.',
+  },
+];
+
 function useCountUp(target: number, duration = 1800, start = false) {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -151,6 +186,7 @@ function MonitoringPreview() {
 
 export default function LandingPage() {
   const [heroEmail, setHeroEmail] = useState('');
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: '',
     domain: '',
@@ -434,6 +470,56 @@ export default function LandingPage() {
                     </span>
                   ))}
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section
+        className="py-24 px-6"
+        style={{ background: 'rgba(255,255,255,0.025)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-bold" style={{ letterSpacing: '-0.02em' }}>
+              Ofte stillede spørgsmål
+            </h2>
+          </div>
+          <div
+            className="flex flex-col"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            {FAQ_ITEMS.map((item, i) => (
+              <div key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full text-left py-5 flex items-center justify-between gap-4"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1.25rem 0' }}
+                >
+                  <span className="font-medium text-white">{item.q}</span>
+                  <span
+                    className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{
+                      background: 'rgba(0,212,255,0.1)',
+                      border: '1px solid rgba(0,212,255,0.25)',
+                      color: '#00D4FF',
+                      transform: openFaq === i ? 'rotate(45deg)' : 'none',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                </button>
+                {openFaq === i && (
+                  <div className="pb-5 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    {item.a}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -786,6 +872,27 @@ export default function LandingPage() {
             </form>
           </div>
           )}
+        </div>
+      </section>
+
+      {/* ── Om os ── */}
+      <section className="py-20 px-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>Om os</p>
+          <h2 className="text-3xl font-bold mb-10" style={{ letterSpacing: '-0.02em' }}>
+            Hvem er bag AISignal?
+          </h2>
+          <div className="space-y-5 text-left max-w-2xl mx-auto">
+            <p className="leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              AISignal drives af AI Institute — grundlagt af Dennis Plejdrup med det ene formål at gøre det enkelt for danske virksomheder at holde sig opdateret på AI.
+            </p>
+            <p className="leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              Vi tror ikke på, at virksomheder skal bruge tid på at følge tekniske blogindlæg eller decode AI-nyheder. Vi gør det for dig og sender dig det, der faktisk betyder noget.
+            </p>
+            <p className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              Ingen jargon. Ingen hype. Bare det du har brug for at vide.
+            </p>
+          </div>
         </div>
       </section>
 
