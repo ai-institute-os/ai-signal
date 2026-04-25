@@ -100,6 +100,7 @@ async function initSchema(db: Client): Promise<void> {
     `ALTER TABLE companies ADD COLUMN paused_until TEXT`,
     `ALTER TABLE companies ADD COLUMN verification_token TEXT`,
     `ALTER TABLE companies ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE companies ADD COLUMN management_token TEXT`,
   ];
   for (const sql of migrations) {
     try {
@@ -108,6 +109,12 @@ async function initSchema(db: Client): Promise<void> {
       // Column already exists — ignore
     }
   }
+
+  // Backfill management_token for existing rows that don't have one
+  await db.execute({
+    sql: `UPDATE companies SET management_token = lower(hex(randomblob(16))) WHERE management_token IS NULL`,
+    args: [],
+  });
 }
 
 // Row → typed object helpers
@@ -136,6 +143,7 @@ function parseCompanyRow(row: Record<string, unknown>): Company {
     paused_until: (row.paused_until as string | null) ?? null,
     verification_token: (row.verification_token as string | null) ?? null,
     email_verified: (row.email_verified as number) === 1,
+    management_token: (row.management_token as string | null) ?? null,
   };
 }
 
@@ -163,6 +171,7 @@ export interface Company {
   paused_until: string | null;
   verification_token: string | null;
   email_verified: boolean;
+  management_token: string | null;
 }
 
 export interface MonitoringRun {
@@ -208,17 +217,18 @@ export async function createCompany(
   verificationToken?: string
 ): Promise<Company> {
   const db = await ensureInit();
+  const managementToken = crypto.randomUUID();
   if (verificationToken) {
     await db.execute({
-      sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password, subscriber_status, email_verified, verification_token)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?)`,
-      args: [id, name, domain, email, category, JSON.stringify(competitors), country, password, verificationToken],
+      sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password, subscriber_status, email_verified, verification_token, management_token)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?)`,
+      args: [id, name, domain, email, category, JSON.stringify(competitors), country, password, verificationToken, managementToken],
     });
   } else {
     await db.execute({
-      sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [id, name, domain, email, category, JSON.stringify(competitors), country, password],
+      sql: `INSERT INTO companies (id, name, domain, email, category, competitors, country, password, management_token)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, name, domain, email, category, JSON.stringify(competitors), country, password, managementToken],
     });
   }
   return (await getCompany(id))!;
@@ -658,4 +668,14 @@ export async function updateSubscriberPreferences(
   vals.push(companyId);
   await db.execute({ sql: `UPDATE companies SET ${sets.join(', ')} WHERE id = ?`, args: vals as never[] });
   return getCompany(companyId);
+}
+
+export async function getCompanyByManagementToken(token: string): Promise<Company | null> {
+  const db = await ensureInit();
+  const result = await db.execute({
+    sql: 'SELECT * FROM companies WHERE management_token = ?',
+    args: [token],
+  });
+  if (result.rows.length === 0) return null;
+  return parseCompanyRow(result.rows[0] as Record<string, unknown>);
 }

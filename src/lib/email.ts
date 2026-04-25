@@ -23,13 +23,20 @@ async function sendEmailWithRetry(
 
 const BASE_URL = () => process.env.NEXT_PUBLIC_BASE_URL || 'https://aisignal.dk';
 
-async function subscriberFooter(companyId: string): Promise<string> {
-  const token = await signSubscriberToken(companyId);
+async function subscriberFooter(companyId: string, managementToken?: string | null): Promise<string> {
+  const jwtToken = await signSubscriberToken(companyId);
   const base = BASE_URL();
-  const unsubUrl = `${base}/api/unsubscribe?token=${encodeURIComponent(token)}`;
-  const prefsUrl = `${base}/preferences?token=${encodeURIComponent(token)}`;
-  const manageUrl = `${base}/api/subscribers/manage?token=${encodeURIComponent(token)}`;
-  return `<a href="${manageUrl}" style="color:#52525b;text-decoration:none;">Administrer abonnement</a> · <a href="${prefsUrl}" style="color:#52525b;text-decoration:none;">Indstillinger</a> · <a href="${unsubUrl}" style="color:#52525b;text-decoration:none;">Afmeld</a>`;
+
+  // Use management token (stable UUID) for unsubscribe/email links when available
+  const unsubUrl = managementToken
+    ? `${base}/afmeld?token=${encodeURIComponent(managementToken)}`
+    : `${base}/api/unsubscribe?token=${encodeURIComponent(jwtToken)}`;
+  const emailUrl = managementToken
+    ? `${base}/opdater-email?token=${encodeURIComponent(managementToken)}`
+    : `${base}/api/subscribers/manage?token=${encodeURIComponent(jwtToken)}`;
+  const prefsUrl = `${base}/preferences?token=${encodeURIComponent(jwtToken)}`;
+
+  return `<a href="${emailUrl}" style="color:#52525b;text-decoration:none;">Opdater email</a> · <a href="${prefsUrl}" style="color:#52525b;text-decoration:none;">Indstillinger</a> · <a href="${unsubUrl}" style="color:#52525b;text-decoration:none;">Afmeld</a>`;
 }
 
 function emailWrapper(subject: string, bodyHtml: string, footerNote: string, footerLinks?: string): string {
@@ -757,6 +764,121 @@ export async function sendWeeklyDigestEmail(
   } catch (err) {
     console.error('Failed to send weekly digest email:', err);
   }
+}
+
+export async function sendUnsubscribeConfirmationEmail(
+  toEmail: string,
+  companyName: string,
+  companyId: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping unsubscribe confirmation email');
+    return;
+  }
+
+  const subject = `Du er afmeldt AISignal-alerts — ${companyName}`;
+  const token = await signSubscriberToken(companyId);
+  const prefsUrl = `${BASE_URL()}/preferences?token=${encodeURIComponent(token)}`;
+
+  const body = `
+    <div style="text-align:center;">
+      <div style="width:48px;height:48px;border-radius:50%;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);margin:0 auto 20px;display:inline-flex;align-items:center;justify-content:center;">
+        <span style="font-size:24px;">✓</span>
+      </div>
+      <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Du er afmeldt</h1>
+      <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+        Du modtager ikke længere AISignal-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong>.
+      </p>
+      <p style="margin:0 0 24px;font-size:13px;color:#71717a;line-height:1.6;">
+        Fortrudt? Du kan til enhver tid genaktivere dine alerts via dine indstillinger.
+      </p>
+      ${ctaButton(prefsUrl, 'Genaktiver alerts')}
+    </div>`;
+
+  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
+  const text = `Du er afmeldt AISignal-alerts for ${companyName}.\n\nFortrudt? Genaktiver alerts: ${prefsUrl}\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send unsubscribe confirmation email:', err);
+  }
+}
+
+export async function sendEmailUpdatedOldAddressNotification(
+  oldEmail: string,
+  newEmail: string,
+  companyName: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping email update notification');
+    return;
+  }
+
+  const subject = `Din AISignal-email er ændret — ${companyName}`;
+
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Email-adresse ændret</h1>
+    <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+      AISignal-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong> vil fremover blive sendt til:
+    </p>
+    <div style="background:#27272a;border-radius:10px;padding:14px 16px;margin-bottom:24px;">
+      <p style="margin:0;font-size:14px;color:#d4d4d8;">${escapeHtml(newEmail)}</p>
+    </div>
+    <p style="margin:0;font-size:12px;color:#52525b;line-height:1.6;">
+      Har du ikke selv foretaget denne ændring? Kontakt os omgående ved at svare på denne email.
+    </p>`;
+
+  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
+  const text = `Email-adresse ændret for ${companyName}.\n\nFremtidige alerts sendes til: ${newEmail}\n\nHar du ikke selv foretaget denne ændring? Svar på denne email.\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: oldEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send email update old address notification:', err);
+  }
+}
+
+export async function sendEmailUpdatedNewAddressConfirmation(
+  newEmail: string,
+  companyName: string,
+  companyId: string
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('RESEND_API_KEY not set — skipping email update confirmation');
+    return;
+  }
+
+  const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
+  const subject = `Bekræftelse: din email er opdateret — ${companyName}`;
+
+  const body = `
+    <div style="text-align:center;">
+      <div style="width:48px;height:48px;border-radius:50%;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);margin:0 auto 20px;display:inline-flex;align-items:center;justify-content:center;">
+        <span style="font-size:24px;">✓</span>
+      </div>
+      <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Email opdateret</h1>
+      <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
+        AISignal-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong> sendes nu til denne adresse.
+      </p>
+      ${ctaButton(dashboardUrl, 'Gå til dashboard →')}
+    </div>`;
+
+  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
+  const text = `Din AISignal-email for ${companyName} er nu opdateret til ${newEmail}.\n\nDashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+
+  try {
+    await resend.emails.send({ from: FROM_EMAIL, to: newEmail, subject, html, text });
+  } catch (err) {
+    console.error('Failed to send email update new address confirmation:', err);
+  }
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export async function sendEmailChangeVerificationEmail(
