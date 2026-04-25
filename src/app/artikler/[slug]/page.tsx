@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Article } from '@/lib/db';
 
@@ -14,6 +14,8 @@ export default function ArtikelPage({ params }: { params: Promise<{ slug: string
   const [data, setData] = useState<ArticleResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isRead, setIsRead] = useState(false);
+  const articleEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch(`/api/articles/${slug}`)
@@ -32,6 +34,29 @@ export default function ArtikelPage({ params }: { params: Promise<{ slug: string
         setLoading(false);
       });
   }, [slug]);
+
+  // Track when user reaches the bottom of the article
+  useEffect(() => {
+    if (!data || isRead) return;
+
+    const el = articleEndRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          fetch(`/api/articles/${slug}/read`, { method: 'POST' })
+            .then(r => { if (r.ok) setIsRead(true); })
+            .catch(() => {});
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [data, slug, isRead]);
 
   if (loading) {
     return (
@@ -76,13 +101,23 @@ export default function ArtikelPage({ params }: { params: Promise<{ slug: string
       <main className="max-w-3xl mx-auto px-6 py-16">
         <article>
           <header className="mb-10">
-            <time className="text-xs text-gray-400 mb-3 block">
-              {new Date(article.published_at).toLocaleDateString('da-DK', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </time>
+            <div className="flex items-center gap-3 mb-3">
+              <time className="text-xs text-gray-400">
+                {new Date(article.published_at).toLocaleDateString('da-DK', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </time>
+              {isRead && (
+                <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Læst
+                </span>
+              )}
+            </div>
             <h1 className="text-4xl font-bold text-gray-900 leading-tight mb-4">
               {article.title}
             </h1>
@@ -105,6 +140,9 @@ export default function ArtikelPage({ params }: { params: Promise<{ slug: string
             className="prose prose-gray max-w-none leading-relaxed text-gray-700"
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
+
+          {/* Sentinel element: when visible, article is considered read */}
+          <div ref={articleEndRef} className="h-1 mt-8" aria-hidden="true" />
         </article>
 
         {related.length > 0 && (

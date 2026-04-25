@@ -104,10 +104,18 @@ async function initSchema(db: Client): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS article_reads (
+      company_id TEXT NOT NULL,
+      article_id TEXT NOT NULL,
+      read_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (company_id, article_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_results_company ON monitoring_results(company_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_alerts_company ON alerts(company_id, seen);
     CREATE INDEX IF NOT EXISTS idx_articles_status ON articles(status, published_at);
     CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
+    CREATE INDEX IF NOT EXISTS idx_article_reads_company ON article_reads(company_id);
   `);
 
   // Migrations for existing databases
@@ -798,6 +806,8 @@ export async function updateArticleTags(id: string, tags: string[]): Promise<voi
     args: [JSON.stringify(tags), id],
   });
 }
+
+export { ensureInit as getDb };
 
 export async function getActiveNewsletterSubscribers(): Promise<Company[]> {
   const db = await ensureInit();

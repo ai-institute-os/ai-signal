@@ -1,8 +1,10 @@
+import { NextRequest } from 'next/server';
 import { getArticleBySlug } from '@/lib/db';
-import { getRelatedArticles } from '@/lib/related-articles';
+import { verifySession, COOKIE_NAME } from '@/lib/auth';
+import { getRelatedArticlesForUser } from '@/lib/reading-progress';
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
@@ -12,7 +14,15 @@ export async function GET(
     return Response.json({ error: 'Artikel ikke fundet' }, { status: 404 });
   }
 
-  const related = await getRelatedArticles(article.id, article.tags, 3);
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const session = token ? await verifySession(token) : null;
+
+  const related = await getRelatedArticlesForUser(
+    article.id,
+    article.tags,
+    session?.companyId ?? null,
+    3
+  );
 
   return Response.json({ article, related });
 }
