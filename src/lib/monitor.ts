@@ -45,6 +45,22 @@ interface PromptSpec {
   buildPrompt: (company: Company) => string;
 }
 
+// Topic-specific prompts keyed by ai_emner value
+const TOPIC_PROMPTS: Record<string, (company: Company) => string> = {
+  'generativ AI': (c) =>
+    `Hvordan bruger virksomheder inden for ${c.branche || c.category}-sektoren generativ AI i 2025? Er ${c.name} (${c.domain}) nævnt som en tidlig adopter eller frontløber?`,
+  'automation': (c) =>
+    `Hvilke ${c.branche || c.category}-virksomheder leder an i automatisering med AI? Er ${c.name} blandt dem?`,
+  'data-analyse': (c) =>
+    `Hvilke virksomheder i ${c.branche || c.category}-branchen er anerkendt for avanceret dataanalyse og AI-indsigt? Nævnes ${c.name}?`,
+  'AI-etik': (c) =>
+    `Hvilke ${c.branche || c.category}-virksomheder er frontløbere inden for ansvarlig og etisk brug af AI? Er ${c.name} en af dem?`,
+  'computer vision': (c) =>
+    `Hvilke ${c.branche || c.category}-virksomheder bruger computer vision og billedgenkendelse? Er ${c.name} (${c.domain}) i front?`,
+  'NLP': (c) =>
+    `Hvilke ${c.branche || c.category}-virksomheder er bedst til at anvende naturlig sprogbehandling (NLP) og sprogmodeller? Nævnes ${c.name}?`,
+};
+
 const PROMPTS: PromptSpec[] = [
   {
     type: 'direct_choice',
@@ -262,10 +278,21 @@ export async function runMonitoringForCompany(company: Company): Promise<string>
   const premium = isPremium(company);
   const signalLimit = premium ? Infinity : FREE_TIER_SIGNAL_LIMIT;
 
+  // Build effective prompt list: base prompts + topic-specific prompts from preferences
+  const effectivePrompts: PromptSpec[] = [...PROMPTS];
+  if (company.ai_emner && company.ai_emner.length > 0) {
+    for (const emne of company.ai_emner) {
+      const builder = TOPIC_PROMPTS[emne];
+      if (builder) {
+        effectivePrompts.push({ type: `topic_${emne.replace(/\s+/g, '_')}`, buildPrompt: builder });
+      }
+    }
+  }
+
   try {
     let signalCount = 0;
     outer: for (const provider of activeProviders) {
-      for (const spec of PROMPTS) {
+      for (const spec of effectivePrompts) {
         if (signalCount >= signalLimit) break outer;
 
         const prompt = spec.buildPrompt(company);

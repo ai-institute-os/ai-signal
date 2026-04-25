@@ -34,10 +34,15 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { frequency, status, pause_days } = body as {
+  const VALID_BRANCHER = ['finans', 'HR', 'marketing', 'produktion', 'IT', 'sundhed', 'detail', 'andet'];
+  const VALID_AI_EMNER = ['generativ AI', 'automation', 'data-analyse', 'AI-etik', 'computer vision', 'NLP'];
+
+  const { frequency, status, pause_days, branche, ai_emner } = body as {
     frequency?: string;
     status?: string;
     pause_days?: number;
+    branche?: string;
+    ai_emner?: string[];
   };
 
   const update: Parameters<typeof updateSubscriberPreferences>[1] = {};
@@ -63,6 +68,20 @@ export async function PATCH(
     }
   }
 
+  if (branche !== undefined) {
+    if (branche !== '' && !VALID_BRANCHER.includes(branche)) {
+      return NextResponse.json({ error: 'Ugyldig branche' }, { status: 400 });
+    }
+    update.branche = branche;
+  }
+
+  if (ai_emner !== undefined) {
+    if (!Array.isArray(ai_emner) || ai_emner.length > 3 || ai_emner.some(t => !VALID_AI_EMNER.includes(t))) {
+      return NextResponse.json({ error: 'ai_emner skal være max 3 gyldige emner' }, { status: 400 });
+    }
+    update.ai_emner = ai_emner;
+  }
+
   const updated = await updateSubscriberPreferences(id, update);
   if (!updated) {
     return NextResponse.json({ error: 'Update failed' }, { status: 500 });
@@ -71,9 +90,12 @@ export async function PATCH(
   return NextResponse.json({
     id: updated.id,
     email: updated.email,
+    name: updated.name,
     frequency: updated.alert_frequency,
     status: updated.subscriber_status,
     paused_until: updated.paused_until,
+    branche: updated.branche,
+    ai_emner: updated.ai_emner,
   });
 }
 
@@ -108,5 +130,7 @@ export async function GET(
     frequency: company.alert_frequency,
     status: company.subscriber_status,
     paused_until: company.paused_until,
+    branche: company.branche,
+    ai_emner: company.ai_emner,
   });
 }

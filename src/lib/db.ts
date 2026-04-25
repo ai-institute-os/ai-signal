@@ -52,7 +52,9 @@ async function initSchema(db: Client): Promise<void> {
       subscriber_status TEXT NOT NULL DEFAULT 'active',
       paused_until TEXT,
       verification_token TEXT,
-      email_verified INTEGER NOT NULL DEFAULT 1
+      email_verified INTEGER NOT NULL DEFAULT 1,
+      branche TEXT NOT NULL DEFAULT '',
+      ai_emner TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS monitoring_runs (
@@ -101,6 +103,8 @@ async function initSchema(db: Client): Promise<void> {
     `ALTER TABLE companies ADD COLUMN verification_token TEXT`,
     `ALTER TABLE companies ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 1`,
     `ALTER TABLE companies ADD COLUMN management_token TEXT`,
+    `ALTER TABLE companies ADD COLUMN branche TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE companies ADD COLUMN ai_emner TEXT NOT NULL DEFAULT '[]'`,
   ];
   for (const sql of migrations) {
     try {
@@ -144,6 +148,8 @@ function parseCompanyRow(row: Record<string, unknown>): Company {
     verification_token: (row.verification_token as string | null) ?? null,
     email_verified: (row.email_verified as number) === 1,
     management_token: (row.management_token as string | null) ?? null,
+    branche: (row.branche as string) || '',
+    ai_emner: JSON.parse((row.ai_emner as string) || '[]'),
   };
 }
 
@@ -172,6 +178,8 @@ export interface Company {
   verification_token: string | null;
   email_verified: boolean;
   management_token: string | null;
+  branche: string;
+  ai_emner: string[];
 }
 
 export interface MonitoringRun {
@@ -624,6 +632,8 @@ export interface SubscriberPreferences {
   alert_frequency: 'weekly' | 'monthly';
   subscriber_status: 'active' | 'paused' | 'unsubscribed';
   paused_until: string | null;
+  branche: string;
+  ai_emner: string[];
 }
 
 export async function getCompanyByVerificationToken(token: string): Promise<Company | null> {
@@ -664,10 +674,20 @@ export async function updateSubscriberPreferences(
   if (prefs.alert_frequency !== undefined) { sets.push('alert_frequency = ?'); vals.push(prefs.alert_frequency); }
   if (prefs.subscriber_status !== undefined) { sets.push('subscriber_status = ?'); vals.push(prefs.subscriber_status); }
   if (prefs.paused_until !== undefined) { sets.push('paused_until = ?'); vals.push(prefs.paused_until); }
+  if (prefs.branche !== undefined) { sets.push('branche = ?'); vals.push(prefs.branche); }
+  if (prefs.ai_emner !== undefined) { sets.push('ai_emner = ?'); vals.push(JSON.stringify(prefs.ai_emner)); }
   if (sets.length === 0) return getCompany(companyId);
   vals.push(companyId);
   await db.execute({ sql: `UPDATE companies SET ${sets.join(', ')} WHERE id = ?`, args: vals as never[] });
   return getCompany(companyId);
+}
+
+export async function updateVerificationToken(companyId: string, token: string): Promise<void> {
+  const db = await ensureInit();
+  await db.execute({
+    sql: `UPDATE companies SET verification_token = ? WHERE id = ?`,
+    args: [token, companyId],
+  });
 }
 
 export async function getCompanyByManagementToken(token: string): Promise<Company | null> {

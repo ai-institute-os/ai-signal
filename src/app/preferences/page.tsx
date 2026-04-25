@@ -3,6 +3,9 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+const BRANCHER = ['finans', 'HR', 'marketing', 'produktion', 'IT', 'sundhed', 'detail', 'andet'] as const;
+const AI_EMNER = ['generativ AI', 'automation', 'data-analyse', 'AI-etik', 'computer vision', 'NLP'] as const;
+
 interface Prefs {
   id: string;
   email: string;
@@ -10,6 +13,8 @@ interface Prefs {
   frequency: 'weekly' | 'monthly';
   status: 'active' | 'paused' | 'unsubscribed';
   paused_until: string | null;
+  branche: string;
+  ai_emner: string[];
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -22,6 +27,8 @@ function PreferencesContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [frequency, setFrequency] = useState<'weekly' | 'monthly'>('weekly');
+  const [branche, setBranche] = useState('');
+  const [aiEmner, setAiEmner] = useState<string[]>([]);
   const [saveState, setSaveState] = useState<SaveState>('idle');
 
   useEffect(() => {
@@ -56,13 +63,15 @@ function PreferencesContent() {
       const data: Prefs = await res.json();
       setPrefs(data);
       setFrequency(data.frequency);
+      setBranche(data.branche || '');
+      setAiEmner(data.ai_emner || []);
       setLoading(false);
     }
 
     fetchPrefs();
   }, [token]);
 
-  async function save(updates: { frequency?: string; status?: string; pause_days?: number }) {
+  async function save(updates: { frequency?: string; status?: string; pause_days?: number; branche?: string; ai_emner?: string[] }) {
     if (!prefs || !token) return;
     setSaveState('saving');
 
@@ -81,8 +90,18 @@ function PreferencesContent() {
     const updated: Prefs = await res.json();
     setPrefs(updated);
     setFrequency(updated.frequency);
+    setBranche(updated.branche || '');
+    setAiEmner(updated.ai_emner || []);
     setSaveState('saved');
     setTimeout(() => setSaveState('idle'), 2500);
+  }
+
+  function toggleAiEmne(emne: string) {
+    if (aiEmner.includes(emne)) {
+      setAiEmner(aiEmner.filter(e => e !== emne));
+    } else if (aiEmner.length < 3) {
+      setAiEmner([...aiEmner, emne]);
+    }
   }
 
   if (loading) {
@@ -196,6 +215,82 @@ function PreferencesContent() {
                 ? 'Du modtager alerts én gang om ugen.'
                 : 'Du modtager alerts én gang om måneden.'}
             </p>
+          </div>
+        )}
+
+        {/* Branche */}
+        {!isUnsubscribed && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
+            <p className="text-zinc-500 text-xs uppercase tracking-wide mb-3">Din branche</p>
+            <select
+              value={branche}
+              onChange={(e) => setBranche(e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-violet-500 transition-colors"
+            >
+              <option value="">Vælg branche…</option>
+              {BRANCHER.map((b) => (
+                <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>
+              ))}
+            </select>
+            <p className="text-zinc-600 text-xs mt-2">
+              Bruges til at tilpasse rapporten til din branche.
+            </p>
+            {branche !== (prefs.branche || '') && (
+              <button
+                onClick={() => save({ branche })}
+                disabled={saveState === 'saving'}
+                className="mt-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+              >
+                {saveState === 'saving' ? 'Gemmer…' : 'Gem branche'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* AI-emner */}
+        {!isUnsubscribed && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <p className="text-zinc-500 text-xs uppercase tracking-wide">AI-emner</p>
+              <p className="text-zinc-600 text-xs">{aiEmner.length}/3 valgt</p>
+            </div>
+            <div className="space-y-2">
+              {AI_EMNER.map((emne) => {
+                const checked = aiEmner.includes(emne);
+                const disabled = !checked && aiEmner.length >= 3;
+                return (
+                  <label
+                    key={emne}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      checked
+                        ? 'bg-violet-600/10 border-violet-600/40 text-zinc-200'
+                        : disabled
+                        ? 'bg-zinc-800/40 border-zinc-800 text-zinc-600 cursor-not-allowed'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() => toggleAiEmne(emne)}
+                      className="accent-violet-600 w-4 h-4 flex-shrink-0"
+                    />
+                    <span className="text-sm">{emne}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-zinc-600 text-xs mt-2">Vælg op til 3 emner du vil have fokus på.</p>
+            {JSON.stringify(aiEmner.slice().sort()) !== JSON.stringify((prefs.ai_emner || []).slice().sort()) && (
+              <button
+                onClick={() => save({ ai_emner: aiEmner })}
+                disabled={saveState === 'saving'}
+                className="mt-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+              >
+                {saveState === 'saving' ? 'Gemmer…' : 'Gem emner'}
+              </button>
+            )}
           </div>
         )}
 
