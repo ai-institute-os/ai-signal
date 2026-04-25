@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompany, getLatestRunForCompany } from '@/lib/db';
 import { runMonitoringForCompany } from '@/lib/monitor';
+import { verifySession, COOKIE_NAME } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
   try {
     const { companyId } = await req.json();
     if (!companyId) {
       return NextResponse.json({ error: 'companyId er påkrævet.' }, { status: 400 });
+    }
+
+    const token = req.cookies.get(COOKIE_NAME)?.value;
+    const session = token ? await verifySession(token) : null;
+    if (!session || session.companyId !== companyId) {
+      return NextResponse.json({ error: 'Ikke autoriseret.' }, { status: 401 });
+    }
+
+    const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown';
+    const { allowed, remainingMs } = checkRateLimit(`monitor-run:${ip}`);
+    if (!allowed) {
+      const minutes = Math.ceil(remainingMs / 60000);
+      return NextResponse.json(
+        { error: `For mange forsøg. Prøv igen om ${minutes} minut${minutes !== 1 ? 'ter' : ''}.` },
+        { status: 429 }
+      );
     }
 
     const company = await getCompany(companyId);
