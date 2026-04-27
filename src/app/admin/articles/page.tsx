@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface ArticleRow {
   id: string;
@@ -124,6 +125,7 @@ function ArticleTagEditor({
 }
 
 export default function AdminArticlesPage() {
+  const router = useRouter();
   const [secret, setSecret] = useState('');
   const [authed, setAuthed] = useState(false);
   const [articles, setArticles] = useState<ArticleRow[]>([]);
@@ -237,6 +239,12 @@ export default function AdminArticlesPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-zinc-500">{articles.length} artikler</span>
+            <button
+              onClick={() => router.push('/admin/articles/new')}
+              className="rounded-lg bg-violet-600 hover:bg-violet-500 px-3 py-1.5 text-xs font-medium text-white transition-colors"
+            >
+              + Ny artikel
+            </button>
             <button
               onClick={() => {
                 sessionStorage.removeItem('admin_secret');

@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
-import { createCompany, getCompanyByEmail } from '@/lib/db';
+import { createCompany, getCompanyByEmail, updateVerificationToken } from '@/lib/db';
 import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
     const { name, domain, email, category, competitors, country, password } = await req.json();
 
-    if (!name || !domain || !email || !category || !country || !password) {
+    if (!name || !domain || !email || !category || !country) {
       return NextResponse.json(
-        { error: 'Manglende felter: name, domain, email, category, country, password er påkrævet.' },
+        { error: 'Manglende felter: name, domain, email, category, country er påkrævet.' },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
+    if (password && password.length < 8) {
       return NextResponse.json(
         { error: 'Adgangskode skal være mindst 8 tegn.' },
         { status: 400 }
@@ -27,13 +27,12 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       if (!existing.email_verified) {
-        // Resend verification email for pending accounts
-        const token = existing.verification_token;
-        if (token) {
-          sendVerificationEmail(emailLower, existing.name, existing.id, token).catch((e) =>
-            console.error('Resend verification email error:', e)
-          );
-        }
+        // Generate a fresh token each resend so expiry resets
+        const freshToken = uuidv4();
+        await updateVerificationToken(existing.id, freshToken);
+        sendVerificationEmail(emailLower, existing.name, existing.id, freshToken).catch((e) =>
+          console.error('Resend verification email error:', e)
+        );
         return NextResponse.json({ pending: true, existing: true });
       }
       return NextResponse.json({ companyId: existing.id, existing: true });
@@ -45,7 +44,8 @@ export async function POST(req: NextRequest) {
       ? competitors.filter((c: unknown) => typeof c === 'string' && c.trim())
       : [];
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const effectivePassword = password || uuidv4();
+    const hashedPassword = await bcrypt.hash(effectivePassword, 12);
 
     await createCompany(
       id,

@@ -379,13 +379,32 @@ export default function LandingPage() {
               className="text-4xl sm:text-5xl xl:text-[3.5rem] font-extrabold leading-[1.08] mb-6"
               style={{ letterSpacing: '-0.03em' }}
             >
-              AI anbefaler nogen i din kategori.{' '}
-              <span style={{ color: '#00D4FF' }}>Er det dig?</span>
+              Smarte AI-signaler til{' '}
+              <span style={{ color: '#00D4FF' }}>din danske virksomhed</span>
             </h1>
 
-            <p className="text-lg mb-10 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              AISignal overvåger ugentligt, om ChatGPT, Gemini og Perplexity nævner og vælger din virksomhed — og sender resultatet direkte til dig.
+            <p className="text-lg mb-8 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              AISignal giver dig handlingsbar AI-indsigt, så du kan træffe bedre beslutninger – uden teknisk baggrund.
             </p>
+
+            {/* 3 value points */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+              {[
+                { icon: '📊', title: 'Realtids-indsigt', body: 'Se præcis, hvad der sker i din branche – opdateret dagligt og filtreret til din virksomhed.' },
+                { icon: '🤖', title: 'AI-anbefalinger', body: 'Få konkrete handlingsforslag baseret på din situation – ikke generiske råd.' },
+                { icon: '🔒', title: 'Dansk og sikkert', body: 'Dine data behandles i overensstemmelse med GDPR. Ingen overraskelser, kun tryghed.' },
+              ].map((v) => (
+                <div
+                  key={v.title}
+                  className="rounded-xl p-4 flex flex-col gap-1.5"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                >
+                  <div className="text-lg">{v.icon}</div>
+                  <p className="text-xs font-semibold text-white">{v.title}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{v.body}</p>
+                </div>
+              ))}
+            </div>
 
             {/* Email signup form */}
             <form onSubmit={handleHeroSubmit} className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -409,14 +428,25 @@ export default function LandingPage() {
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                Start gratis →
+                Prøv AISignal gratis →
               </button>
             </form>
 
-            <div className="flex items-center gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              <span>✓ Ingen kreditkort</span>
-              <span>✓ Resultater på 2 min</span>
-              <span>✓ Ingen binding</span>
+            <div className="flex items-center gap-4 flex-wrap mb-2">
+              <div className="flex items-center gap-5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                <span>✓ Ingen kreditkort</span>
+                <span>✓ Resultater på 2 min</span>
+                <span>✓ Ingen binding</span>
+              </div>
+              <a
+                href="#features"
+                className="text-xs transition-colors"
+                style={{ color: 'rgba(0,212,255,0.65)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#00D4FF')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(0,212,255,0.65)')}
+              >
+                Se, hvordan det virker →
+              </a>
             </div>
 
             <div className="flex items-center gap-2 mt-4 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
@@ -425,7 +455,7 @@ export default function LandingPage() {
                   <div key={i} className="w-5 h-5 rounded-full border-2 shrink-0" style={{ background: c, borderColor: '#0A1628' }} />
                 ))}
               </div>
-              <span>Over <strong className="text-white">200 virksomheder</strong> overvåges allerede</span>
+              <span>Mere end <strong className="text-white">500 danske SMVer</strong> bruger allerede AISignal</span>
             </div>
           </div>
 
@@ -991,8 +1021,8 @@ export default function LandingPage() {
                 <span className="text-white">AI</span>
                 <span style={{ color: '#00D4FF' }}>Signal</span>
               </div>
-              <p className="text-xs leading-relaxed max-w-[200px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                AI-synlighedsmonitorering for virksomheder.<br />Udviklet af AI Institute ApS.
+              <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                AISignal – AI-indsigt for alle danske virksomheder.<br />Udviklet af AI Institute ApS.
               </p>
             </div>
             <div className="flex flex-wrap gap-x-10 gap-y-5 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>

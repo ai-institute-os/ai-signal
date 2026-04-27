@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { Resend } from 'resend';
-import { getActiveNewsletterSubscribers, getPublishedArticles, Article } from '@/lib/db';
+import { getActiveNewsletterSubscribers, getPublishedArticles, Article, Company } from '@/lib/db';
 import { signSubscriberToken } from '@/lib/auth';
 
 export const maxDuration = 300;
@@ -30,6 +30,28 @@ function formatDanishDate(date: Date): string {
     'juli', 'august', 'september', 'oktober', 'november', 'december',
   ];
   return `${date.getDate()}. ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+const CATEGORY_TAG_MAP: Record<string, string[]> = {
+  'produktopdateringer': ['produkt', 'opdatering', 'update', 'release', 'launch'],
+  'casestudier': ['case', 'studie', 'succes'],
+  'lovgivning': ['lovgivning', 'reguler', 'gdpr', 'eu ai act', 'jura', 'compliance'],
+};
+
+function getArticleCategory(tags: string[]): string {
+  const tagStr = tags.join(' ').toLowerCase();
+  for (const [category, keywords] of Object.entries(CATEGORY_TAG_MAP)) {
+    if (keywords.some(kw => tagStr.includes(kw))) return category;
+  }
+  return 'ai-nyheder';
+}
+
+function subscriberWantsNewsletter(subscriber: Company, featuredArticle: Article): boolean {
+  if (subscriber.unsubscribed_at) return false;
+  const emailPrefs = subscriber.preferences_json;
+  if (!emailPrefs || emailPrefs.categories.length === 0) return true;
+  const articleCategory = getArticleCategory(featuredArticle.tags);
+  return emailPrefs.categories.includes(articleCategory);
 }
 
 function articleVars(
@@ -104,8 +126,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
 
   for (const subscriber of subscribers) {
+    if (!subscriberWantsNewsletter(subscriber, featured)) {
+      skipped++;
+      continue;
+    }
+
     try {
       const subscriberToken = await signSubscriberToken(subscriber.id);
       const unsubscribeUrl = `${base}/api/unsubscribe?token=${subscriberToken}`;
@@ -153,6 +181,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  console.log(`Newsletter: sent=${sent} failed=${failed} total=${subscribers.length}`);
-  return NextResponse.json({ sent, failed, total: subscribers.length });
+  console.log(`Newsletter: sent=${sent} failed=${failed} skipped=${skipped} total=${subscribers.length}`);
+  return NextResponse.json({ sent, failed, skipped, total: subscribers.length });
 }

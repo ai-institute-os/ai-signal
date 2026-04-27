@@ -3,33 +3,41 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-const BRANCHER = ['finans', 'HR', 'marketing', 'produktion', 'IT', 'sundhed', 'detail', 'andet'] as const;
-const AI_EMNER = ['generativ AI', 'automation', 'data-analyse', 'AI-etik', 'computer vision', 'NLP'] as const;
+const CATEGORIES = [
+  { id: 'ai-nyheder', label: 'AI-nyheder' },
+  { id: 'produktopdateringer', label: 'Produktopdateringer' },
+  { id: 'casestudier', label: 'Casestudier' },
+  { id: 'lovgivning', label: 'Lovgivning/regulering' },
+] as const;
 
-interface Prefs {
-  id: string;
+type CategoryId = typeof CATEGORIES[number]['id'];
+
+interface PrefsData {
   email: string;
-  name: string;
+  categories: CategoryId[];
   frequency: 'weekly' | 'monthly';
-  status: 'active' | 'paused' | 'unsubscribed';
-  paused_until: string | null;
-  branche: string;
-  ai_emner: string[];
+  status: string;
+  unsubscribed_at: string | null;
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+const NAVY = '#0A1628';
+const NAVY_CARD = '#0D1F3C';
+const NAVY_BORDER = '#1A3354';
+const CYAN = '#00D4FF';
 
 function PreferencesContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
-  const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [prefs, setPrefs] = useState<PrefsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CategoryId[]>([]);
   const [frequency, setFrequency] = useState<'weekly' | 'monthly'>('weekly');
-  const [branche, setBranche] = useState('');
-  const [aiEmner, setAiEmner] = useState<string[]>([]);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [unsubscribed, setUnsubscribed] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -38,302 +46,250 @@ function PreferencesContent() {
       return;
     }
 
-    async function fetchPrefs() {
-      let companyId: string;
-      try {
-        const parts = token!.split('.');
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-        companyId = payload.companyId;
-      } catch {
-        setError('Ugyldigt link. Brug linket fra din email.');
+    fetch(`/api/preferences/update?token=${encodeURIComponent(token)}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then((data: PrefsData) => {
+        setPrefs(data);
+        setCategories(data.categories as CategoryId[]);
+        setFrequency(data.frequency);
+        setUnsubscribed(data.status === 'unsubscribed' || !!data.unsubscribed_at);
         setLoading(false);
-        return;
-      }
-
-      const res = await fetch(`/api/subscribers/${companyId}/preferences?token=${encodeURIComponent(token!)}`, {
-        method: 'GET',
-      });
-
-      if (!res.ok) {
+      })
+      .catch(() => {
         setError('Kunne ikke hente dine indstillinger. Prøv igen via linket i din email.');
         setLoading(false);
-        return;
-      }
-
-      const data: Prefs = await res.json();
-      setPrefs(data);
-      setFrequency(data.frequency);
-      setBranche(data.branche || '');
-      setAiEmner(data.ai_emner || []);
-      setLoading(false);
-    }
-
-    fetchPrefs();
+      });
   }, [token]);
 
-  async function save(updates: { frequency?: string; status?: string; pause_days?: number; branche?: string; ai_emner?: string[] }) {
-    if (!prefs || !token) return;
+  async function save(updates: { categories?: CategoryId[]; frequency?: string }) {
+    if (!token) return;
     setSaveState('saving');
-
-    const res = await fetch(`/api/subscribers/${prefs.id}/preferences?token=${encodeURIComponent(token)}`, {
-      method: 'PATCH',
+    const res = await fetch(`/api/preferences/update?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
-
     if (!res.ok) {
       setSaveState('error');
       setTimeout(() => setSaveState('idle'), 3000);
       return;
     }
-
-    const updated: Prefs = await res.json();
-    setPrefs(updated);
-    setFrequency(updated.frequency);
-    setBranche(updated.branche || '');
-    setAiEmner(updated.ai_emner || []);
+    const data = await res.json();
+    setCategories(data.categories as CategoryId[]);
+    setFrequency(data.frequency);
     setSaveState('saved');
     setTimeout(() => setSaveState('idle'), 2500);
   }
 
-  function toggleAiEmne(emne: string) {
-    if (aiEmner.includes(emne)) {
-      setAiEmner(aiEmner.filter(e => e !== emne));
-    } else if (aiEmner.length < 3) {
-      setAiEmner([...aiEmner, emne]);
+  async function doUnsubscribe() {
+    if (!token || !confirm('Er du sikker på, at du vil afmelde alle AISignal-emails?')) return;
+    setSaveState('saving');
+    const res = await fetch(`/api/preferences/update?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unsubscribe: true }),
+    });
+    if (!res.ok) {
+      setSaveState('error');
+      setTimeout(() => setSaveState('idle'), 3000);
+      return;
     }
+    setUnsubscribed(true);
+    setSaveState('idle');
   }
+
+  function toggleCategory(id: CategoryId) {
+    setCategories(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    );
+  }
+
+  const dirty =
+    JSON.stringify([...categories].sort()) !== JSON.stringify([...(prefs?.categories ?? [])].sort()) ||
+    frequency !== prefs?.frequency;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400 text-sm">Henter dine indstillinger…</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: NAVY }}>
+        <p style={{ color: CYAN }} className="text-sm animate-pulse">Henter dine indstillinger…</p>
       </div>
     );
   }
 
   if (error || !prefs) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">✗</span>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: NAVY }}>
+        <div className="rounded-2xl p-8 max-w-sm w-full text-center" style={{ backgroundColor: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <span className="text-red-400 text-xl font-bold">✕</span>
           </div>
-          <h1 className="text-white font-bold text-xl mb-2">Ugyldigt link</h1>
-          <p className="text-zinc-400 text-sm">{error || 'Noget gik galt.'}</p>
+          <h1 className="font-bold text-xl mb-2 text-white">Ugyldigt link</h1>
+          <p className="text-sm" style={{ color: '#8BA3C7' }}>{error || 'Noget gik galt.'}</p>
         </div>
       </div>
     );
   }
 
-  const isUnsubscribed = prefs.status === 'unsubscribed';
-  const isPaused = prefs.status === 'paused';
-  const pausedUntilFormatted = prefs.paused_until
-    ? new Date(prefs.paused_until).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' })
-    : null;
+  if (unsubscribed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: NAVY }}>
+        <div className="rounded-2xl p-8 max-w-sm w-full text-center" style={{ backgroundColor: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(0,212,255,0.1)', border: `1px solid rgba(0,212,255,0.3)` }}>
+            <span className="text-sm font-bold" style={{ color: CYAN }}>✓</span>
+          </div>
+          <h1 className="font-bold text-xl mb-2 text-white">Du er afmeldt</h1>
+          <p className="text-sm" style={{ color: '#8BA3C7' }}>
+            Du modtager ikke længere emails fra AISignal.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-16">
+    <div className="min-h-screen px-4 py-12" style={{ backgroundColor: NAVY }}>
       <div className="max-w-md mx-auto">
+
         {/* Logo */}
-        <div className="flex items-center gap-2 mb-8">
-          <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xs">AI</span>
+        <div className="flex items-center gap-2.5 mb-10">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm" style={{ backgroundColor: CYAN, color: NAVY }}>
+            AI
           </div>
-          <span className="text-white font-semibold text-base">AISignal</span>
+          <span className="font-semibold text-white text-base">AISignal</span>
         </div>
 
-        <h1 className="text-white font-bold text-2xl mb-1">Email-præferencer</h1>
-        <p className="text-zinc-400 text-sm mb-8">
-          Administrer dine AISignal-alerts for <span className="text-zinc-200">{prefs.name}</span>
+        <h1 className="font-bold text-2xl text-white mb-1">Email-præferencer</h1>
+        <p className="text-sm mb-8" style={{ color: '#8BA3C7' }}>
+          Vælg hvilke emails du vil modtage på <span className="text-white">{prefs.email}</span>
         </p>
 
-        {/* Current email */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
-          <p className="text-zinc-500 text-xs uppercase tracking-wide mb-1">Email</p>
-          <p className="text-zinc-200 text-sm">{prefs.email}</p>
-        </div>
-
-        {/* Status */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
-          <p className="text-zinc-500 text-xs uppercase tracking-wide mb-3">Status</p>
-          {isUnsubscribed ? (
-            <div>
-              <p className="text-red-400 text-sm mb-3">Du er afmeldt AISignal-alerts.</p>
-              <button
-                onClick={() => save({ status: 'active' })}
-                disabled={saveState === 'saving'}
-                className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {saveState === 'saving' ? 'Gemmer…' : 'Genaktiver alerts'}
-              </button>
-            </div>
-          ) : isPaused ? (
-            <div>
-              <p className="text-yellow-400 text-sm mb-1">
-                Alerts er sat på pause til {pausedUntilFormatted}.
-              </p>
-              <p className="text-zinc-500 text-xs mb-3">Du modtager ingen emails i pausen.</p>
-              <button
-                onClick={() => save({ status: 'active' })}
-                disabled={saveState === 'saving'}
-                className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {saveState === 'saving' ? 'Gemmer…' : 'Genoptag alerts nu'}
-              </button>
-            </div>
-          ) : (
-            <p className="text-green-400 text-sm">Aktiv — du modtager alerts.</p>
-          )}
+        {/* Categories */}
+        <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#8BA3C7' }}>
+            Indholdstyper
+          </p>
+          <div className="space-y-2.5">
+            {CATEGORIES.map(({ id, label }) => {
+              const checked = categories.includes(id);
+              return (
+                <label
+                  key={id}
+                  className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all select-none"
+                  style={{
+                    backgroundColor: checked ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${checked ? 'rgba(0,212,255,0.35)' : NAVY_BORDER}`,
+                  }}
+                >
+                  <div
+                    className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                    style={{
+                      backgroundColor: checked ? CYAN : 'transparent',
+                      border: `2px solid ${checked ? CYAN : '#2A4A6B'}`,
+                    }}
+                  >
+                    {checked && (
+                      <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                        <path d="M1 3.5L3.5 6L8 1" stroke={NAVY} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCategory(id)}
+                    className="sr-only"
+                  />
+                  <span className="text-sm font-medium text-white">{label}</span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-xs mt-3" style={{ color: '#4A6B8A' }}>
+            Fravælg kategorier du ikke er interesseret i.
+          </p>
         </div>
 
         {/* Frequency */}
-        {!isUnsubscribed && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
-            <p className="text-zinc-500 text-xs uppercase tracking-wide mb-3">Frekvens</p>
-            <div className="flex gap-2">
-              {(['weekly', 'monthly'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => {
-                    setFrequency(f);
-                    save({ frequency: f });
-                  }}
-                  disabled={saveState === 'saving'}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors disabled:opacity-50 ${
-                    frequency === f
-                      ? 'bg-violet-600 border-violet-600 text-white'
-                      : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
-                  }`}
-                >
-                  {f === 'weekly' ? 'Ugentlig' : 'Månedlig'}
-                </button>
-              ))}
-            </div>
-            <p className="text-zinc-600 text-xs mt-2">
-              {frequency === 'weekly'
-                ? 'Du modtager alerts én gang om ugen.'
-                : 'Du modtager alerts én gang om måneden.'}
-            </p>
-          </div>
-        )}
-
-        {/* Branche */}
-        {!isUnsubscribed && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
-            <p className="text-zinc-500 text-xs uppercase tracking-wide mb-3">Din branche</p>
-            <select
-              value={branche}
-              onChange={(e) => setBranche(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-violet-500 transition-colors"
-            >
-              <option value="">Vælg branche…</option>
-              {BRANCHER.map((b) => (
-                <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>
-              ))}
-            </select>
-            <p className="text-zinc-600 text-xs mt-2">
-              Bruges til at tilpasse rapporten til din branche.
-            </p>
-            {branche !== (prefs.branche || '') && (
+        <div className="rounded-xl p-5 mb-4" style={{ backgroundColor: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#8BA3C7' }}>
+            Frekvens
+          </p>
+          <div className="flex gap-2">
+            {(['weekly', 'monthly'] as const).map(f => (
               <button
-                onClick={() => save({ branche })}
+                key={f}
+                onClick={() => setFrequency(f)}
                 disabled={saveState === 'saving'}
-                className="mt-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+                className="flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                style={{
+                  backgroundColor: frequency === f ? CYAN : 'rgba(255,255,255,0.04)',
+                  color: frequency === f ? NAVY : '#8BA3C7',
+                  border: `1px solid ${frequency === f ? CYAN : NAVY_BORDER}`,
+                  fontWeight: frequency === f ? 600 : 400,
+                }}
               >
-                {saveState === 'saving' ? 'Gemmer…' : 'Gem branche'}
+                {f === 'weekly' ? 'Ugentlig' : 'Månedlig'}
               </button>
-            )}
+            ))}
           </div>
+          <p className="text-xs mt-3" style={{ color: '#4A6B8A' }}>
+            {frequency === 'weekly' ? 'Du modtager én email om ugen.' : 'Du modtager én email om måneden.'}
+          </p>
+        </div>
+
+        {/* Save button */}
+        {dirty && (
+          <button
+            onClick={() => save({ categories, frequency })}
+            disabled={saveState === 'saving'}
+            className="w-full py-3 rounded-xl text-sm font-semibold mb-4 transition-all disabled:opacity-60"
+            style={{ backgroundColor: CYAN, color: NAVY }}
+          >
+            {saveState === 'saving' ? 'Gemmer…' : 'Gem indstillinger'}
+          </button>
         )}
 
-        {/* AI-emner */}
-        {!isUnsubscribed && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4">
-            <div className="flex items-baseline justify-between mb-3">
-              <p className="text-zinc-500 text-xs uppercase tracking-wide">AI-emner</p>
-              <p className="text-zinc-600 text-xs">{aiEmner.length}/3 valgt</p>
-            </div>
-            <div className="space-y-2">
-              {AI_EMNER.map((emne) => {
-                const checked = aiEmner.includes(emne);
-                const disabled = !checked && aiEmner.length >= 3;
-                return (
-                  <label
-                    key={emne}
-                    className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                      checked
-                        ? 'bg-violet-600/10 border-violet-600/40 text-zinc-200'
-                        : disabled
-                        ? 'bg-zinc-800/40 border-zinc-800 text-zinc-600 cursor-not-allowed'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-600'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => toggleAiEmne(emne)}
-                      className="accent-violet-600 w-4 h-4 flex-shrink-0"
-                    />
-                    <span className="text-sm">{emne}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <p className="text-zinc-600 text-xs mt-2">Vælg op til 3 emner du vil have fokus på.</p>
-            {JSON.stringify(aiEmner.slice().sort()) !== JSON.stringify((prefs.ai_emner || []).slice().sort()) && (
-              <button
-                onClick={() => save({ ai_emner: aiEmner })}
-                disabled={saveState === 'saving'}
-                className="mt-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {saveState === 'saving' ? 'Gemmer…' : 'Gem emner'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Actions */}
-        {!isUnsubscribed && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6 space-y-3">
-            <p className="text-zinc-500 text-xs uppercase tracking-wide">Handlinger</p>
-            {!isPaused && (
-              <button
-                onClick={() => save({ status: 'paused', pause_days: 30 })}
-                disabled={saveState === 'saving'}
-                className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-sm font-medium py-2.5 px-4 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                Sæt pause i 30 dage
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (confirm('Er du sikker på, at du vil afmelde AISignal-alerts?')) {
-                  save({ status: 'unsubscribed' });
-                }
-              }}
-              disabled={saveState === 'saving'}
-              className="w-full bg-zinc-800 hover:bg-red-900/30 border border-zinc-700 hover:border-red-800 text-zinc-400 hover:text-red-400 text-sm font-medium py-2.5 px-4 rounded-lg disabled:opacity-50 transition-colors"
-            >
-              Afmeld alle alerts
-            </button>
-          </div>
-        )}
-
-        {/* Save feedback */}
+        {/* Feedback */}
         {saveState === 'saved' && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-2.5 mb-4">
-            <p className="text-green-400 text-sm">Indstillinger gemt.</p>
+          <div className="rounded-lg px-4 py-2.5 mb-4" style={{ backgroundColor: 'rgba(0,212,255,0.08)', border: `1px solid rgba(0,212,255,0.3)` }}>
+            <p className="text-sm" style={{ color: CYAN }}>Indstillinger gemt.</p>
           </div>
         )}
         {saveState === 'error' && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2.5 mb-4">
-            <p className="text-red-400 text-sm">Noget gik galt. Prøv igen.</p>
+          <div className="rounded-lg px-4 py-2.5 mb-4" style={{ backgroundColor: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <p className="text-sm text-red-400">Noget gik galt. Prøv igen.</p>
           </div>
         )}
 
-        <p className="text-zinc-600 text-xs text-center">© 2026 AISignal · AI-synlighedsmonitorering</p>
+        {/* Unsubscribe */}
+        <div className="rounded-xl p-5 mb-8" style={{ backgroundColor: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#8BA3C7' }}>
+            Afmelding
+          </p>
+          <p className="text-xs mb-3" style={{ color: '#4A6B8A' }}>
+            Afmeld alle AISignal-emails permanent. Du kan altid melde dig til igen via aisignal.dk.
+          </p>
+          <button
+            onClick={doUnsubscribe}
+            disabled={saveState === 'saving'}
+            className="w-full py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+            style={{ backgroundColor: 'transparent', color: '#8BA3C7', border: `1px solid ${NAVY_BORDER}` }}
+            onMouseOver={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = '#F87171';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,113,113,0.4)';
+            }}
+            onMouseOut={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = '#8BA3C7';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = NAVY_BORDER;
+            }}
+          >
+            Afmeld alle emails
+          </button>
+        </div>
+
+        <p className="text-xs text-center" style={{ color: '#2A4A6B' }}>
+          © 2026 AISignal · AI-synlighedsmonitorering
+        </p>
       </div>
     </div>
   );
@@ -342,8 +298,8 @@ function PreferencesContent() {
 export default function PreferencesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400 text-sm">Indlæser…</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0A1628' }}>
+        <p className="text-sm animate-pulse" style={{ color: '#00D4FF' }}>Indlæser…</p>
       </div>
     }>
       <PreferencesContent />
