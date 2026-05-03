@@ -13,7 +13,7 @@ function getResend(): Resend | null {
   return new Resend(key);
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'AISignal <newsletter@aisignal.dk>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'InsideAI <newsletter@aisignal.dk>';
 const BASE_URL = () => process.env.NEXT_PUBLIC_BASE_URL || 'https://aisignal.dk';
 
 function escapeHtml(str: string): string {
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const currentYear = now.getFullYear().toString();
 
   const featured = articles[0];
-  const emailSubject = `AISignal Nyhedsbrev — ${issueDate}`;
+  const emailSubject = `InsideAI Nyhedsbrev — ${issueDate}`;
 
   let sent = 0;
   let failed = 0;

@@ -131,7 +131,7 @@ export default function SettingsPage({ params }: { params: Promise<{ id: string 
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80">
               <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center text-xs font-bold">AI</div>
-              <span className="font-semibold tracking-tight">AISignal</span>
+              <span className="font-semibold tracking-tight">InsideAI</span>
             </button>
             <span className="text-zinc-600">/</span>
             <button onClick={() => router.push(`/dashboard/${id}`)} className="text-sm text-zinc-300 hover:text-white">
@@ -164,7 +164,7 @@ export default function SettingsPage({ params }: { params: Promise<{ id: string 
           <div className="flex items-center justify-between">
             <div>
               <div className="text-base font-semibold text-white">
-                {trialActive ? 'AISignal Premium' : 'AISignal Gratis'}
+                {trialActive ? 'InsideAI Premium' : 'InsideAI Gratis'}
               </div>
               {trialActive && trialDaysLeft !== null && (
                 <div className="text-xs text-zinc-400 mt-1">

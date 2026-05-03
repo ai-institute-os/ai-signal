@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   if (company.subscriber_status === 'unsubscribed') {
     return new NextResponse(
-      confirmationPage('Allerede afmeldt', `${company.email} er allerede afmeldt AISignal-alerts.`, true),
+      confirmationPage('Allerede afmeldt', `${company.email} er allerede afmeldt InsideAI-alerts.`, true),
       { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
   }
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(
     confirmationPage(
       'Du er afmeldt',
-      `Du er nu afmeldt AISignal-alerts for <strong>${company.name}</strong>.<br><br>Vi er kede af at se dig gå.`,
+      `Du er nu afmeldt InsideAI-alerts for <strong>${company.name}</strong>.<br><br>Vi er kede af at se dig gå.`,
       true,
       prefsUrl
     ),
@@ -67,7 +67,7 @@ function confirmationPage(title: string, message: string, success: boolean, pref
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} — AISignal</title>
+  <title>${title} — InsideAI</title>
 </head>
 <body style="margin:0;padding:0;background:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#09090b;padding:80px 20px;">
@@ -82,7 +82,7 @@ function confirmationPage(title: string, message: string, success: boolean, pref
                     <span style="color:#fff;font-weight:700;font-size:12px;">AI</span>
                   </td>
                   <td style="padding-left:8px;">
-                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">AISignal</span>
+                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">InsideAI</span>
                   </td>
                 </tr>
               </table>
@@ -100,7 +100,7 @@ function confirmationPage(title: string, message: string, success: boolean, pref
           </tr>
           <tr>
             <td style="padding-top:24px;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#3f3f46;">© 2026 AISignal · AI-synlighedsmonitorering</p>
+              <p style="margin:0;font-size:11px;color:#3f3f46;">© 2026 InsideAI · AI-synlighedsmonitorering</p>
             </td>
           </tr>
         </table>

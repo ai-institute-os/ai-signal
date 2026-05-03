@@ -22,8 +22,8 @@ function generateSecurePassword(length: number): string {
   return password;
 }
 
-// Called after AIScore review call to grant 3-month free premium trial on AISignal.
-// If the company does not yet have an AISignal account it is created automatically.
+// Called after AIScore review call to grant 3-month free premium trial on InsideAI.
+// If the company does not yet have an InsideAI account it is created automatically.
 // Requires ADMIN_SECRET header to prevent unauthorized access.
 export async function POST(req: NextRequest) {
   const authError = requireAdminAuth(req);
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     let created = false;
 
     if (!company) {
-      // Auto-create an AISignal account for the AIScore customer.
+      // Auto-create an InsideAI account for the AIScore customer.
       if (!email || !name) {
         return NextResponse.json(
           { error: 'Virksomhed ikke fundet. Angiv email og name for at oprette en ny konto.' },
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         .catch((e) => console.error('Trial welcome email error:', e));
 
       return NextResponse.json({
-        message: 'AISignal-konto oprettet og 3-måneders gratis premium trial aktiveret.',
+        message: 'InsideAI-konto oprettet og 3-måneders gratis premium trial aktiveret.',
         companyId: company.id,
         companyName: company.name,
         trialEndsAt,

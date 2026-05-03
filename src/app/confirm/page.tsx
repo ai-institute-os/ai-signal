@@ -77,7 +77,7 @@ export default async function ConfirmPage({ searchParams }: Props) {
               <span style={{ color: '#fff', fontWeight: 700, fontSize: 12 }}>AI</span>
             </div>
             <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, letterSpacing: '-0.3px' }}>
-              AISignal
+              InsideAI
             </span>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default async function ConfirmPage({ searchParams }: Props) {
                   textAlign: 'center',
                 }}
               >
-                AISignal overvåger nu{' '}
+                InsideAI overvåger nu{' '}
                 <strong style={{ color: '#d4d4d8' }}>{company.name}</strong> på tværs af ChatGPT,
                 Gemini og Perplexity.
               </p>
@@ -324,7 +324,7 @@ export default async function ConfirmPage({ searchParams }: Props) {
             color: '#3f3f46',
           }}
         >
-          © 2026 AISignal · AI-synlighedsmonitorering
+          © 2026 InsideAI · AI-synlighedsmonitorering
         </p>
       </div>
     </div>

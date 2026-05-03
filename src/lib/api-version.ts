@@ -1,5 +1,5 @@
 /**
- * API versioning utilities shared across AISignal API routes.
+ * API versioning utilities shared across InsideAI API routes.
  *
  * Usage in a route handler:
  *   import { withVersion, withDeprecation } from "@/lib/api-version";

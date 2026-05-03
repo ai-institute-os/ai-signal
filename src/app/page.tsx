@@ -40,8 +40,8 @@ const FAQ_ITEMS = [
     a: 'Ja. Den gratis plan kræver hverken kreditkort eller binding. Du angiver din virksomhed og modtager ugentlige AI-overvågningsrapporter automatisk. Pro-funktioner lanceres på et tidspunkt — men gratis er gratis.',
   },
   {
-    q: 'Hvad gør AISignal, som jeg ikke selv kan?',
-    a: 'Du kan spørge ChatGPT om din virksomhed én gang. AISignal gør det systematisk og ugentligt — på tværs af tre AI-modeller, med de spørgsmål rigtige brugere stiller. Og sender dig resultatet uden at du løfter en finger.',
+    q: 'Hvad gør InsideAI, som jeg ikke selv kan?',
+    a: 'Du kan spørge ChatGPT om din virksomhed én gang. InsideAI gør det systematisk og ugentligt — på tværs af tre AI-modeller, med de spørgsmål rigtige brugere stiller. Og sender dig resultatet uden at du løfter en finger.',
   },
   {
     q: 'Hvad kan jeg egentlig bruge det til?',
@@ -104,7 +104,7 @@ function MonitoringPreview() {
       <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#00D4FF' }} />
-          <span className="text-xs font-mono tracking-tight" style={{ color: 'rgba(0,212,255,0.8)' }}>AISignal · Live overvågning</span>
+          <span className="text-xs font-mono tracking-tight" style={{ color: 'rgba(0,212,255,0.8)' }}>InsideAI · Live overvågning</span>
         </div>
         <span className="text-xs font-mono rounded px-1.5 py-0.5" style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>Demo-data</span>
       </div>
@@ -384,7 +384,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-lg mb-8 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              AISignal giver dig handlingsbar AI-indsigt, så du kan træffe bedre beslutninger – uden teknisk baggrund.
+              InsideAI giver dig handlingsbar AI-indsigt, så du kan træffe bedre beslutninger – uden teknisk baggrund.
             </p>
 
             {/* 3 value points */}
@@ -428,7 +428,7 @@ export default function LandingPage() {
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                Prøv AISignal gratis →
+                Prøv InsideAI gratis →
               </button>
             </form>
 
@@ -455,7 +455,7 @@ export default function LandingPage() {
                   <div key={i} className="w-5 h-5 rounded-full border-2 shrink-0" style={{ background: c, borderColor: '#0A1628' }} />
                 ))}
               </div>
-              <span>Mere end <strong className="text-white">500 danske SMVer</strong> bruger allerede AISignal</span>
+              <span>Mere end <strong className="text-white">500 danske SMVer</strong> bruger allerede InsideAI</span>
             </div>
           </div>
 
@@ -468,13 +468,13 @@ export default function LandingPage() {
       {/* ── Problem strip ── */}
       <section className="py-20 px-6" style={{ background: 'rgba(255,255,255,0.025)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>Hvad er AISignal</p>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>Hvad er InsideAI</p>
           <h2 className="text-3xl sm:text-4xl font-bold mb-5 leading-tight" style={{ letterSpacing: '-0.02em' }}>
             AI-modeller ændrer sig.<br />
             <span style={{ color: 'rgba(255,255,255,0.45)' }}>Opdager du det?</span>
           </h2>
           <p className="text-lg mb-4 max-w-2xl mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            AI-modeller bruges i stigende grad til at finde og vælge leverandører, produkter og services. AISignal overvåger din position i det landskab — ugentligt, automatisk og uden at du behøver gøre noget.
+            AI-modeller bruges i stigende grad til at finde og vælge leverandører, produkter og services. InsideAI overvåger din position i det landskab — ugentligt, automatisk og uden at du behøver gøre noget.
           </p>
           <p className="text-base mb-14 max-w-xl mx-auto font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>
             Du ved altid, om AI arbejder for dig eller imod dig.
@@ -500,7 +500,7 @@ export default function LandingPage() {
           <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-5 text-left">
             {[
               { quote: 'Vi opdagede at Gemini anbefalede en konkurrent i 7 uger — nu ved vi det inden det sker igen.', name: 'Søren J.', role: 'Revisionsfirma' },
-              { quote: 'Jeg troede vi var synlige for AI. AISignal viste at vi slet ikke blev nævnt på de vigtigste spørgsmål.', name: 'Mette K.', role: 'Konsulentvirksomhed' },
+              { quote: 'Jeg troede vi var synlige for AI. InsideAI viste at vi slet ikke blev nævnt på de vigtigste spørgsmål.', name: 'Mette K.', role: 'Konsulentvirksomhed' },
               { quote: 'På to uger gik vi fra 0 til 3 ud af 4 anbefalinger — og vi kan se præcis hvad der ændrede sig.', name: 'Lars B.', role: 'Softwarevirksomhed' },
             ].map((t, i) => (
               <div
@@ -724,7 +724,7 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* AISignal Pro — Coming soon */}
+            {/* InsideAI Pro — Coming soon */}
             <div
               className="relative rounded-2xl p-8 flex flex-col gap-6"
               style={{ background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.2)' }}
@@ -738,7 +738,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <div>
-                <h3 className="font-bold text-xl text-white">AISignal Pro</h3>
+                <h3 className="font-bold text-xl text-white">InsideAI Pro</h3>
                 <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>Du ved ikke bare om du nævnes — du ved præcis, hvornår det begyndte at gå galt.</p>
                 <div className="mt-5">
                   <p className="text-3xl font-extrabold text-white">fra 299 kr<span className="text-base font-normal" style={{ color: 'rgba(255,255,255,0.4)' }}>/md</span></p>
@@ -784,7 +784,7 @@ export default function LandingPage() {
             <div>
               <p className="font-semibold text-white">3 måneder gratis med AIScore-rapport</p>
               <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                Har du en AIScore-rapport? Aktiver AISignal med din rapport-kode og få 3 måneders gratis overvågning inkluderet.
+                Har du en AIScore-rapport? Aktiver InsideAI med din rapport-kode og få 3 måneders gratis overvågning inkluderet.
               </p>
             </div>
             <a
@@ -978,11 +978,11 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#00D4FF' }}>Om os</p>
           <h2 className="text-3xl font-bold mb-10" style={{ letterSpacing: '-0.02em' }}>
-            Hvem er bag AISignal?
+            Hvem er bag InsideAI?
           </h2>
           <div className="space-y-5 text-left max-w-2xl mx-auto">
             <p className="leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              AISignal drives af AI Institute — grundlagt af Dennis Plejdrup med det ene formål at gøre det enkelt for danske virksomheder at holde sig opdateret på AI.
+              InsideAI drives af AI Institute — grundlagt af Dennis Plejdrup med det ene formål at gøre det enkelt for danske virksomheder at holde sig opdateret på AI.
             </p>
             <p className="leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
               Vi tror ikke på, at virksomheder skal bruge tid på at følge tekniske blogindlæg eller decode AI-nyheder. Vi gør det for dig og sender dig det, der faktisk betyder noget.
@@ -1003,7 +1003,7 @@ export default function LandingPage() {
             style={{ background: 'rgba(0,212,255,0.05)', border: '1px solid rgba(0,212,255,0.15)' }}
           >
             <h3 className="text-2xl font-bold mb-3">Din AI-position ændrer sig — uanset om du følger med eller ej.</h3>
-            <p className="mb-6" style={{ color: 'rgba(255,255,255,0.5)' }}>Tilmeld AISignal gratis og få den ugentlige rapport direkte i indbakken.</p>
+            <p className="mb-6" style={{ color: 'rgba(255,255,255,0.5)' }}>Tilmeld InsideAI gratis og få den ugentlige rapport direkte i indbakken.</p>
             <a
               href="#signup"
               className="inline-block rounded-xl px-8 py-3.5 text-sm font-bold transition-opacity"
@@ -1022,7 +1022,7 @@ export default function LandingPage() {
                 <span style={{ color: '#00D4FF' }}>Signal</span>
               </div>
               <p className="text-xs leading-relaxed max-w-[220px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                AISignal – AI-indsigt for alle danske virksomheder.<br />Udviklet af AI Institute ApS.
+                InsideAI – AI-indsigt for alle danske virksomheder.<br />Udviklet af AI Institute ApS.
               </p>
             </div>
             <div className="flex flex-wrap gap-x-10 gap-y-5 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
@@ -1036,14 +1036,14 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2.5">
                 <span className="font-semibold uppercase tracking-widest text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>AI Institute-økosystemet</span>
                 <a href="https://aiscore.dk" className="hover:text-white transition-colors">AIScore — AI-synlighedsanalyse</a>
-                <a href="https://aisignal.dk" className="hover:text-white transition-colors">AISignal — Løbende monitorering</a>
+                <a href="https://aisignal.dk" className="hover:text-white transition-colors">InsideAI — Løbende monitorering</a>
                 <a href="https://aiselect.dk" className="hover:text-white transition-colors">AISelect — Implementeringsretainer</a>
               </div>
             </div>
           </div>
 
           <div className="pt-6 text-xs text-center" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }}>
-            © 2026 AI Institute ApS · CVR 44690615 · AISignal™ er et varemærke tilhørende AI Institute ApS
+            © 2026 AI Institute ApS · CVR 44690615 · InsideAI™ er et varemærke tilhørende AI Institute ApS
           </div>
         </div>
       </footer>

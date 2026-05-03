@@ -24,7 +24,7 @@ export default function ArtiklerPage() {
     <div className="min-h-screen bg-white">
       <header className="border-b border-gray-100 px-6 py-4">
         <Link href="/" className="text-sm text-gray-500 hover:text-gray-800 transition-colors">
-          ← Tilbage til AISignal
+          ← Tilbage til InsideAI
         </Link>
       </header>
 

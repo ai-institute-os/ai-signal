@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { signSubscriberToken } from '@/lib/auth';
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'AISignal <alerts@aisignal.dk>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'InsideAI <alerts@aisignal.dk>';
 
 function getResend(): Resend | null {
   const key = process.env.RESEND_API_KEY;
@@ -60,7 +60,7 @@ function emailWrapper(subject: string, bodyHtml: string, footerNote: string, foo
                     <span style="color:#fff;font-weight:700;font-size:12px;">AI</span>
                   </td>
                   <td style="padding-left:8px;">
-                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">AISignal</span>
+                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">InsideAI</span>
                   </td>
                 </tr>
               </table>
@@ -75,7 +75,7 @@ function emailWrapper(subject: string, bodyHtml: string, footerNote: string, foo
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0;font-size:11px;color:#3f3f46;">
                 ${footerNote}<br>
-                © 2026 AISignal · AI-synlighedsmonitorering${footerLinks ? `<br><span style="margin-top:6px;display:inline-block;">${footerLinks}</span>` : ''}
+                © 2026 InsideAI · AI-synlighedsmonitorering${footerLinks ? `<br><span style="margin-top:6px;display:inline-block;">${footerLinks}</span>` : ''}
               </p>
             </td>
           </tr>
@@ -112,12 +112,12 @@ export async function sendVerificationEmail(
   }
 
   const verifyUrl = `${BASE_URL()}/api/confirm?token=${encodeURIComponent(verificationToken)}`;
-  const subject = `Bekræft din AISignal-tilmelding`;
+  const subject = `Bekræft din InsideAI-tilmelding`;
 
   const body = `
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din AISignal-tilmelding</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din InsideAI-tilmelding</h1>
     <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-      Tak fordi du tilmeldte dig AISignal.
+      Tak fordi du tilmeldte dig InsideAI.
     </p>
     <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
       Klik på knappen herunder for at bekræfte din email-adresse.
@@ -130,8 +130,8 @@ export async function sendVerificationEmail(
       Har du ikke tilmeldt dig? Se bort fra denne email.
     </p>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Bekræft din AISignal-tilmelding\n\nTak fordi du tilmeldte dig AISignal.\n\nKlik her for at bekræfte din email-adresse:\n${verifyUrl}\n\nNår du har bekræftet, sender vi dig en velkomst med info om, hvad du modtager fremover.\n\nHar du ikke tilmeldt dig? Se bort fra denne email.\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Bekræft din InsideAI-tilmelding\n\nTak fordi du tilmeldte dig InsideAI.\n\nKlik her for at bekræfte din email-adresse:\n${verifyUrl}\n\nNår du har bekræftet, sender vi dig en velkomst med info om, hvad du modtager fremover.\n\nHar du ikke tilmeldt dig? Se bort fra denne email.\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -187,8 +187,8 @@ export async function sendAlertEmail(
     </div>
     ${ctaButton(dashboardUrl, 'Se dit dashboard →')}`;
 
-  const html = emailWrapper(subject, body, `Du modtager denne besked fordi du er tilmeldt AISignal-overvågning for ${companyName}.`, footerLinks);
-  const text = `AISignal — ${subject}\n\n${textBody}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, `Du modtager denne besked fordi du er tilmeldt InsideAI-overvågning for ${companyName}.`, footerLinks);
+  const text = `InsideAI — ${subject}\n\n${textBody}\n\n© 2026 InsideAI`;
 
   try {
     await sendEmailWithRetry(resend, { from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -212,13 +212,13 @@ export async function sendTrialWelcomeEmail(
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
   const trialEndFormatted = new Date(trialEndsAt).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' });
-  const subject = `3 måneder gratis AISignal Premium — din konto er klar`;
+  const subject = `3 måneder gratis InsideAI Premium — din konto er klar`;
 
   const body = `
     <p style="margin:0 0 4px;font-size:12px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">3 måneder gratis · Premium Trial</p>
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til AISignal, ${companyName}</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til InsideAI, ${companyName}</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      Som AIScore-kunde har du fået <strong style="color:#d4d4d8;">3 måneder gratis AISignal Premium</strong>. Vi overvåger automatisk om din virksomhed nævnes og vælges af AI-systemer — og sender dig alerts ved vigtige ændringer.
+      Som AIScore-kunde har du fået <strong style="color:#d4d4d8;">3 måneder gratis InsideAI Premium</strong>. Vi overvåger automatisk om din virksomhed nævnes og vælges af AI-systemer — og sender dig alerts ved vigtige ændringer.
     </p>
     <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
       <p style="margin:0 0 8px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Dine login-oplysninger</p>
@@ -231,8 +231,8 @@ export async function sendTrialWelcomeEmail(
     </div>
     ${ctaButton(dashboardUrl, 'Åbn dit dashboard →')}`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Velkommen til AISignal Premium!\n\nSom AIScore-kunde har du 3 måneder gratis adgang til og med ${trialEndFormatted}.\n\nLogin:\nEmail: ${toEmail}\nAdgangskode: ${password}\n\nDashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Velkommen til InsideAI Premium!\n\nSom AIScore-kunde har du 3 måneder gratis adgang til og med ${trialEndFormatted}.\n\nLogin:\nEmail: ${toEmail}\nAdgangskode: ${password}\n\nDashboard: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -253,21 +253,21 @@ export async function sendTrialExpiredEmail(
   }
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
-  const subject = `Din gratis AISignal Premium-periode er udløbet — ${companyName}`;
+  const subject = `Din gratis InsideAI Premium-periode er udløbet — ${companyName}`;
 
   const body = `
     <p style="margin:0 0 4px;font-size:12px;color:#ef4444;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Din gratis periode er udløbet</p>
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Din AISignal Premium-trial er slut</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Din InsideAI Premium-trial er slut</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      Din 3-måneders gratis AISignal Premium-adgang for <strong style="color:#d4d4d8;">${companyName}</strong> er nu udløbet. Din konto er skiftet til gratis-planen.
+      Din 3-måneders gratis InsideAI Premium-adgang for <strong style="color:#d4d4d8;">${companyName}</strong> er nu udløbet. Din konto er skiftet til gratis-planen.
     </p>
     <p style="margin:0 0 28px;font-size:14px;color:#a1a1aa;line-height:1.6;">
       Vil du fortsætte med fuld AI-synlighedsovervågning, alerts og premium-funktioner? Kontakt os for at opgradere.
     </p>
     ${ctaButton(dashboardUrl, 'Se dit dashboard →')}`;
 
-  const html = emailWrapper(subject, body, `© 2026 AISignal · AI-synlighedsmonitorering`);
-  const text = `Din AISignal Premium-trial for ${companyName} er nu udløbet.\n\nDin konto er skiftet til gratis-planen. Kontakt os for at opgradere og fortsætte med fuld overvågning.\n\nDashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, `© 2026 InsideAI · AI-synlighedsmonitorering`);
+  const text = `Din InsideAI Premium-trial for ${companyName} er nu udløbet.\n\nDin konto er skiftet til gratis-planen. Kontakt os for at opgradere og fortsætte med fuld overvågning.\n\nDashboard: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await sendEmailWithRetry(resend, { from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -288,12 +288,12 @@ export async function sendWelcomeEmail(
   }
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
-  const subject = `Du er tilmeldt AISignal — her er hvad der sker`;
+  const subject = `Du er tilmeldt InsideAI — her er hvad der sker`;
   const token = await signSubscriberToken(companyId);
   const prefsUrl = `${BASE_URL()}/preferences?token=${encodeURIComponent(token)}`;
 
   const body = `
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til AISignal.</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til InsideAI.</h1>
     <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">
       Hver uge sender vi dig en kort AI-opdatering: de vigtigste bevægelser, de relevante signaler, og hvad det betyder i praksis. Ingen støj — kun det der rykker.
     </p>
@@ -305,8 +305,8 @@ export async function sendWelcomeEmail(
       Vil du ændre dine præferencer eller afmelde dig, kan du gøre det her: <a href="${prefsUrl}" style="color:#a78bfa;text-decoration:none;">Administrer indstillinger</a>
     </p>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Du er tilmeldt AISignal — her er hvad der sker\n\nVelkommen til AISignal.\n\nHver uge sender vi dig en kort AI-opdatering: de vigtigste bevægelser, de relevante signaler, og hvad det betyder i praksis. Ingen støj — kun det der rykker.\n\nDin første alert ankommer til næste udsendelse.\n\nVil du ændre dine præferencer eller afmelde dig, kan du gøre det her: ${prefsUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Du er tilmeldt InsideAI — her er hvad der sker\n\nVelkommen til InsideAI.\n\nHver uge sender vi dig en kort AI-opdatering: de vigtigste bevægelser, de relevante signaler, og hvad det betyder i praksis. Ingen støj — kun det der rykker.\n\nDin første alert ankommer til næste udsendelse.\n\nVil du ændre dine præferencer eller afmelde dig, kan du gøre det her: ${prefsUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -336,7 +336,7 @@ export async function sendFirstReportReadyEmail(
     <p style="margin:0 0 4px;font-size:12px;color:#7c3aed;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Første analyse klar</p>
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Her er hvad AI siger om ${companyName}</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      AISignal har nu gennemført sin første analyse. Vi har stillet strukturerede prompts til ChatGPT, Gemini og Perplexity og målt, hvordan AI-systemer aktuelt opfatter og beskriver din virksomhed.
+      InsideAI har nu gennemført sin første analyse. Vi har stillet strukturerede prompts til ChatGPT, Gemini og Perplexity og målt, hvordan AI-systemer aktuelt opfatter og beskriver din virksomhed.
     </p>
     <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
       <p style="margin:0 0 8px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Dit dashboard viser</p>
@@ -349,8 +349,8 @@ export async function sendFirstReportReadyEmail(
     </div>
     ${ctaButton(dashboardUrl, 'Se analysen →')}`;
 
-  const html = emailWrapper(subject, body, `Du modtager denne besked som AISignal-bruger for ${companyName}.`);
-  const text = `Din første AI-analyse er klar.\n\nAISignal har målt, hvordan ChatGPT, Gemini og Perplexity aktuelt opfatter ${companyName}.\n\nSe resultatet i dit dashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, `Du modtager denne besked som InsideAI-bruger for ${companyName}.`);
+  const text = `Din første AI-analyse er klar.\n\nInsideAI har målt, hvordan ChatGPT, Gemini og Perplexity aktuelt opfatter ${companyName}.\n\nSe resultatet i dit dashboard: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -377,7 +377,7 @@ export async function sendTrialWarningEmail(
 
   const isUrgent = daysLeft <= 2;
   const subject = isUrgent
-    ? `Kun ${daysLeft} dage tilbage — aktiver dit AISignal-abonnement`
+    ? `Kun ${daysLeft} dage tilbage — aktiver dit InsideAI-abonnement`
     : `Din gratis adgang udløber om ${daysLeft} dage — ${companyName}`;
 
   const accentColor = isUrgent ? '#ef4444' : '#f59e0b';
@@ -389,7 +389,7 @@ export async function sendTrialWarningEmail(
       ${isUrgent ? `Kun ${daysLeft} dage tilbage` : `Din gratis adgang udløber om ${daysLeft} dage`}
     </h1>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      Din gratis AISignal Premium-adgang for <strong style="color:#d4d4d8;">${companyName}</strong> udløber om ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dage'}. Når perioden slutter, skifter din konto automatisk til gratis-planen.
+      Din gratis InsideAI Premium-adgang for <strong style="color:#d4d4d8;">${companyName}</strong> udløber om ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dage'}. Når perioden slutter, skifter din konto automatisk til gratis-planen.
     </p>
     <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:10px;padding:16px 20px;margin-bottom:28px;">
       <p style="margin:0 0 8px;font-size:12px;color:#a78bfa;text-transform:uppercase;letter-spacing:0.5px;">Premium inkluderer</p>
@@ -405,8 +405,8 @@ export async function sendTrialWarningEmail(
       Eller <a href="${dashboardUrl}" style="color:#a78bfa;text-decoration:none;">se dit dashboard</a> for at gennemgå dine resultater inden perioden slutter.
     </p>`;
 
-  const html = emailWrapper(subject, body, `Du modtager denne besked fordi din AISignal-trial for ${companyName} nærmer sig sin udløbsdato.`);
-  const text = `AISignal — ${subject}\n\nDin gratis adgang udløber om ${daysLeft} dage.\n\nAktiver abonnement: ${upgradeUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, `Du modtager denne besked fordi din InsideAI-trial for ${companyName} nærmer sig sin udløbsdato.`);
+  const text = `InsideAI — ${subject}\n\nDin gratis adgang udløber om ${daysLeft} dage.\n\nAktiver abonnement: ${upgradeUrl}\n\n© 2026 InsideAI`;
 
   try {
     await sendEmailWithRetry(resend, { from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -430,13 +430,13 @@ export async function sendSubscriptionActivatedEmail(
   }
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
-  const subject = `Abonnement aktiveret — AISignal ${planName}`;
+  const subject = `Abonnement aktiveret — InsideAI ${planName}`;
   const amountFormatted = `${(amountDkk / 100).toLocaleString('da-DK')} kr./md.`;
   const dateFormatted = new Date().toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const body = `
     <p style="margin:0 0 4px;font-size:12px;color:#22c55e;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Aktiveret</p>
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Dit AISignal-abonnement er aktivt</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Dit InsideAI-abonnement er aktivt</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
       Abonnementet for <strong style="color:#d4d4d8;">${companyName}</strong> er nu aktiveret. Fuld AI-synlighedsovervågning kører videre uden afbrydelse.
     </p>
@@ -445,7 +445,7 @@ export async function sendSubscriptionActivatedEmail(
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td style="font-size:13px;color:#a1a1aa;padding:4px 0;">Plan</td>
-          <td style="font-size:13px;color:#d4d4d8;text-align:right;">AISignal ${planName}</td>
+          <td style="font-size:13px;color:#d4d4d8;text-align:right;">InsideAI ${planName}</td>
         </tr>
         <tr>
           <td style="font-size:13px;color:#a1a1aa;padding:4px 0;">Beløb</td>
@@ -464,7 +464,7 @@ export async function sendSubscriptionActivatedEmail(
     ${ctaButton(dashboardUrl, 'Gå til dashboard →')}`;
 
   const html = emailWrapper(subject, body, `Kvittering sendt til ${toEmail}.`);
-  const text = `Abonnement aktiveret — AISignal ${planName}\n\nPlan: AISignal ${planName}\nBeløb: ${amountFormatted}\nDato: ${dateFormatted}\nVirksomhed: ${companyName}\n\nDashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const text = `Abonnement aktiveret — InsideAI ${planName}\n\nPlan: InsideAI ${planName}\nBeløb: ${amountFormatted}\nDato: ${dateFormatted}\nVirksomhed: ${companyName}\n\nDashboard: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -492,8 +492,8 @@ export async function sendUpsellEmail(
   const isLilleTilMellem = fromPlan === 'lille';
 
   const subject = isLilleTilMellem
-    ? `Se hvad du går glip af — AISignal Premium for ${companyName}`
-    : `Udvid din AI-overvågning — AISignal Stor for ${companyName}`;
+    ? `Se hvad du går glip af — InsideAI Premium for ${companyName}`
+    : `Udvid din AI-overvågning — InsideAI Stor for ${companyName}`;
 
   const headline = isLilleTilMellem
     ? 'Din AI-position overvåges. Men ikke fuldt ud.'
@@ -503,8 +503,8 @@ export async function sendUpsellEmail(
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">${headline}</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
       ${isLilleTilMellem
-        ? `AISignal sporer aktuelt ${companyName} på den gratis plan — én ugentlig analyse. Premium giver daglig overvågning, automatiske alerts og konkurrentsporing, så du opdager ændringer i din AI-position, før de påvirker dit salg.`
-        : `AISignal Stor giver dig et komplet konkurrentbillede. Ud over fuld overvågning af ${companyName} spores og sammenlignes dine primære konkurrenter systematisk — uge for uge.`}
+        ? `InsideAI sporer aktuelt ${companyName} på den gratis plan — én ugentlig analyse. Premium giver daglig overvågning, automatiske alerts og konkurrentsporing, så du opdager ændringer i din AI-position, før de påvirker dit salg.`
+        : `InsideAI Stor giver dig et komplet konkurrentbillede. Ud over fuld overvågning af ${companyName} spores og sammenlignes dine primære konkurrenter systematisk — uge for uge.`}
     </p>
     <div style="background:#27272a;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
       <p style="margin:0 0 8px;font-size:12px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">
@@ -529,8 +529,8 @@ export async function sendUpsellEmail(
       Spørgsmål? Svar direkte på denne email.
     </p>`;
 
-  const html = emailWrapper(subject, body, `Du modtager denne besked som AISignal-bruger for ${companyName}.`);
-  const text = `${subject}\n\n${headline}\n\nOpgrader her: ${upgradeUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, `Du modtager denne besked som InsideAI-bruger for ${companyName}.`);
+  const text = `${subject}\n\n${headline}\n\nOpgrader her: ${upgradeUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -581,7 +581,7 @@ function weeklyEmailWrapper(subject: string, bodyHtml: string, footerNote: strin
                           <span style="color:#0A1628;font-weight:800;font-size:13px;">AI</span>
                         </td>
                         <td style="padding-left:10px;">
-                          <span style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-0.4px;">AISignal</span>
+                          <span style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-0.4px;">InsideAI</span>
                         </td>
                       </tr>
                     </table>
@@ -616,7 +616,7 @@ function weeklyEmailWrapper(subject: string, bodyHtml: string, footerNote: strin
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0;font-size:11px;color:#2A3F5A;line-height:1.8;">
                 ${footerNote}<br>
-                © 2026 AISignal · AI-synlighedsmonitorering
+                © 2026 InsideAI · AI-synlighedsmonitorering
                 ${footerLinks ? `<br><span style="margin-top:6px;display:inline-block;">${footerLinks}</span>` : ''}
               </p>
             </td>
@@ -748,16 +748,16 @@ export async function sendWeeklyDigestEmail(
     ${weeklyCta(dashboardUrl, 'Se fuld analyse i dashboard →')}
 
     <p style="margin:18px 0 0;font-size:11px;color:#2A3F5A;line-height:1.6;">
-      AISignal observerer og rapporterer — alle beslutninger er dine.
+      InsideAI observerer og rapporterer — alle beslutninger er dine.
     </p>`;
 
   const footerLinks = await subscriberFooter(companyId);
-  const html = weeklyEmailWrapper(subject, body, `Du modtager denne ugentlige rapport som AISignal-abonnent for ${companyName}.`, footerLinks);
+  const html = weeklyEmailWrapper(subject, body, `Du modtager denne ugentlige rapport som InsideAI-abonnent for ${companyName}.`, footerLinks);
 
   const textLines = signals
     .map((s) => `[${s.level}] ${s.headline}\nKilde: ${s.sourceAI}\nKonsekvens: ${s.consequence}`)
     .join('\n\n');
-  const text = `Ugentlig AI-opdatering for ${companyName}\n\n${weekLabel}\n\n${textLines}\n\nSamlet vurdering: ${samletVurdering}\n\nSe fuld analyse: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const text = `Ugentlig AI-opdatering for ${companyName}\n\n${weekLabel}\n\n${textLines}\n\nSamlet vurdering: ${samletVurdering}\n\nSe fuld analyse: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -777,7 +777,7 @@ export async function sendUnsubscribeConfirmationEmail(
     return;
   }
 
-  const subject = `Du er afmeldt AISignal-alerts — ${companyName}`;
+  const subject = `Du er afmeldt InsideAI-alerts — ${companyName}`;
   const token = await signSubscriberToken(companyId);
   const prefsUrl = `${BASE_URL()}/preferences?token=${encodeURIComponent(token)}`;
 
@@ -788,7 +788,7 @@ export async function sendUnsubscribeConfirmationEmail(
       </div>
       <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Du er afmeldt</h1>
       <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-        Du modtager ikke længere AISignal-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong>.
+        Du modtager ikke længere InsideAI-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong>.
       </p>
       <p style="margin:0 0 24px;font-size:13px;color:#71717a;line-height:1.6;">
         Fortrudt? Du kan til enhver tid genaktivere dine alerts via dine indstillinger.
@@ -796,8 +796,8 @@ export async function sendUnsubscribeConfirmationEmail(
       ${ctaButton(prefsUrl, 'Genaktiver alerts')}
     </div>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Du er afmeldt AISignal-alerts for ${companyName}.\n\nFortrudt? Genaktiver alerts: ${prefsUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Du er afmeldt InsideAI-alerts for ${companyName}.\n\nFortrudt? Genaktiver alerts: ${prefsUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -817,12 +817,12 @@ export async function sendEmailUpdatedOldAddressNotification(
     return;
   }
 
-  const subject = `Din AISignal-email er ændret — ${companyName}`;
+  const subject = `Din InsideAI-email er ændret — ${companyName}`;
 
   const body = `
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Email-adresse ændret</h1>
     <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      AISignal-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong> vil fremover blive sendt til:
+      InsideAI-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong> vil fremover blive sendt til:
     </p>
     <div style="background:#27272a;border-radius:10px;padding:14px 16px;margin-bottom:24px;">
       <p style="margin:0;font-size:14px;color:#d4d4d8;">${escapeHtml(newEmail)}</p>
@@ -831,8 +831,8 @@ export async function sendEmailUpdatedOldAddressNotification(
       Har du ikke selv foretaget denne ændring? Kontakt os omgående ved at svare på denne email.
     </p>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Email-adresse ændret for ${companyName}.\n\nFremtidige alerts sendes til: ${newEmail}\n\nHar du ikke selv foretaget denne ændring? Svar på denne email.\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Email-adresse ændret for ${companyName}.\n\nFremtidige alerts sendes til: ${newEmail}\n\nHar du ikke selv foretaget denne ændring? Svar på denne email.\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: oldEmail, subject, html, text });
@@ -862,13 +862,13 @@ export async function sendEmailUpdatedNewAddressConfirmation(
       </div>
       <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Email opdateret</h1>
       <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-        AISignal-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong> sendes nu til denne adresse.
+        InsideAI-alerts for <strong style="color:#d4d4d8;">${escapeHtml(companyName)}</strong> sendes nu til denne adresse.
       </p>
       ${ctaButton(dashboardUrl, 'Gå til dashboard →')}
     </div>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Din AISignal-email for ${companyName} er nu opdateret til ${newEmail}.\n\nDashboard: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Din InsideAI-email for ${companyName} er nu opdateret til ${newEmail}.\n\nDashboard: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: newEmail, subject, html, text });
@@ -901,25 +901,25 @@ export async function sendNewsletterConfirmationEmail(
   }
 
   const confirmUrl = `${BASE_URL()}/api/confirm?token=${encodeURIComponent(confirmationToken)}&type=newsletter`;
-  const subject = 'Bekræft din tilmelding til AISignal';
+  const subject = 'Bekræft din tilmelding til InsideAI';
   const greeting = name ? `Hej ${escapeHtml(name)},` : 'Hej,';
 
   const body = `
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din tilmelding</h1>
     <p style="margin:0 0 8px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
     <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-      Tak fordi du tilmeldte dig AISignal — det ugentlige nyhedsbrev om AI for danske virksomheder.
+      Tak fordi du tilmeldte dig InsideAI — det ugentlige nyhedsbrev om AI for danske virksomheder.
     </p>
     <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
       Klik på knappen herunder for at bekræfte din email-adresse og aktivere din tilmelding.
     </p>
     ${ctaButton(confirmUrl, 'Bekræft tilmelding')}
     <p style="margin:24px 0 0;font-size:12px;color:#52525b;line-height:1.6;">
-      Har du ikke tilmeldt dig AISignal? Se bort fra denne email — du modtager ikke flere.
+      Har du ikke tilmeldt dig InsideAI? Se bort fra denne email — du modtager ikke flere.
     </p>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-nyheder for danske virksomheder');
-  const text = `Bekræft din tilmelding til AISignal\n\n${greeting}\n\nTak fordi du tilmeldte dig. Klik her for at bekræfte:\n${confirmUrl}\n\nHar du ikke tilmeldt dig? Se bort fra denne email.\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-nyheder for danske virksomheder');
+  const text = `Bekræft din tilmelding til InsideAI\n\n${greeting}\n\nTak fordi du tilmeldte dig. Klik her for at bekræfte:\n${confirmUrl}\n\nHar du ikke tilmeldt dig? Se bort fra denne email.\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -940,15 +940,15 @@ export async function sendNewsletterWelcome1(
   }
 
   const latestUrl = `${BASE_URL()}/udgaver/seneste`;
-  const subject = 'Velkommen til AISignal — her er hvad der venter dig';
+  const subject = 'Velkommen til InsideAI — her er hvad der venter dig';
   const greeting = name ? `Hej ${escapeHtml(name)},` : 'Hej,';
   const footer = newsletterFooter(subscriberId);
 
   const body = `
-    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til AISignal.</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Velkommen til InsideAI.</h1>
     <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
     <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-      Du er nu tilmeldt AISignal — og vi er glade for at have dig med.
+      Du er nu tilmeldt InsideAI — og vi er glade for at have dig med.
     </p>
     <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
       Hver tirsdag morgen kl. 07:00 lander der en ny udgave i din indbakke. Den er skrevet til dig der driver en dansk virksomhed og vil forstå, hvad kunstig intelligens faktisk betyder for din hverdag — uden at du skal have en teknisk baggrund for at følge med.
@@ -965,10 +965,10 @@ export async function sendNewsletterWelcome1(
     <p style="margin:24px 0 0;font-size:13px;color:#71717a;line-height:1.6;">
       Vi skriver til dig én gang om ugen. Ikke mere. Afmeld til enhver tid med ét klik.
     </p>
-    <p style="margin:16px 0 0;font-size:13px;color:#71717a;">— Teamet bag AISignal</p>`;
+    <p style="margin:16px 0 0;font-size:13px;color:#71717a;">— Teamet bag InsideAI</p>`;
 
-  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig AISignal.', footer);
-  const text = `Velkommen til AISignal — her er hvad der venter dig\n\n${greeting}\n\nDu er nu tilmeldt AISignal.\n\nHver tirsdag morgen kl. 07:00 lander der en ny udgave i din indbakke.\n\nSe seneste udgave: ${latestUrl}\n\nVi skriver til dig én gang om ugen. Afmeld til enhver tid.\n\n— Teamet bag AISignal\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig InsideAI.', footer);
+  const text = `Velkommen til InsideAI — her er hvad der venter dig\n\n${greeting}\n\nDu er nu tilmeldt InsideAI.\n\nHver tirsdag morgen kl. 07:00 lander der en ny udgave i din indbakke.\n\nSe seneste udgave: ${latestUrl}\n\nVi skriver til dig én gang om ugen. Afmeld til enhver tid.\n\n— Teamet bag InsideAI\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -997,7 +997,7 @@ export async function sendNewsletterWelcome2(
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">3 AI-fakta de fleste ikke kender</h1>
     <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      Du er nu tre dage inde i dit AISignal-abonnement — og vi vil gerne give dig noget konkret at tænke over.
+      Du er nu tre dage inde i dit InsideAI-abonnement — og vi vil gerne give dig noget konkret at tænke over.
     </p>
     <div style="background:#27272a;border-radius:10px;padding:20px;margin-bottom:24px;">
       <p style="margin:0 0 16px;font-size:14px;color:#d4d4d8;font-weight:600;line-height:1.5;">1. AI-modeller husker ikke hvem du er — men de har allerede en mening om din virksomhed.</p>
@@ -1011,11 +1011,11 @@ export async function sendNewsletterWelcome2(
       Disse tre mønstre er baggrunden for et produkt vi har udviklet: AIScore — en analyse af din virksomheds synlighed og position i AI-modellernes anbefalingssystemer.
     </p>
     ${ctaButton(aiscoreUrl, 'Hvad er AIScore? →')}
-    <p style="margin:24px 0 0;font-size:13px;color:#71717a;">Næste udgave af AISignal udkommer tirsdag.</p>
-    <p style="margin:12px 0 0;font-size:13px;color:#71717a;">— Teamet bag AISignal</p>`;
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;">Næste udgave af InsideAI udkommer tirsdag.</p>
+    <p style="margin:12px 0 0;font-size:13px;color:#71717a;">— Teamet bag InsideAI</p>`;
 
-  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig AISignal.', footer);
-  const text = `3 AI-fakta de fleste danske SMV-ejere ikke kender\n\n${greeting}\n\n1. AI-modeller husker ikke hvem du er — men de har allerede en mening om din virksomhed.\n\n2. Over 40% af danske virksomheder bruger AI i dag — men under 10% har en strategi for det.\n\n3. AI erstatter ikke din branche — men det ændrer hvad kunderne forventer af dig.\n\nLæs mere om AIScore: ${aiscoreUrl}\n\n— Teamet bag AISignal\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig InsideAI.', footer);
+  const text = `3 AI-fakta de fleste danske SMV-ejere ikke kender\n\n${greeting}\n\n1. AI-modeller husker ikke hvem du er — men de har allerede en mening om din virksomhed.\n\n2. Over 40% af danske virksomheder bruger AI i dag — men under 10% har en strategi for det.\n\n3. AI erstatter ikke din branche — men det ændrer hvad kunderne forventer af dig.\n\nLæs mere om AIScore: ${aiscoreUrl}\n\n— Teamet bag InsideAI\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -1044,7 +1044,7 @@ export async function sendNewsletterWelcome3(
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Hvad er din virksomheds AI-modenhedsscore?</h1>
     <p style="margin:0 0 16px;font-size:15px;color:#a1a1aa;line-height:1.6;">${greeting}</p>
     <p style="margin:0 0 16px;font-size:14px;color:#a1a1aa;line-height:1.6;">
-      Det er en uge siden du tilmeldte dig AISignal. Du har nu set, hvad vi skriver om — og vi håber det har givet dig nyt perspektiv på AI i en dansk virksomhedskontekst.
+      Det er en uge siden du tilmeldte dig InsideAI. Du har nu set, hvad vi skriver om — og vi håber det har givet dig nyt perspektiv på AI i en dansk virksomhedskontekst.
     </p>
     <p style="margin:0 0 24px;font-size:14px;color:#a1a1aa;line-height:1.6;">
       Vi vil gerne introducere dig til noget konkret.
@@ -1068,11 +1068,11 @@ export async function sendNewsletterWelcome3(
       Analysen er ikke et dashboard. Den er ikke en tjekliste. Den er en strategisk diagnose — skrevet til dig der vil forstå din virksomheds reelle AI-position.
     </p>
     ${ctaButton(aiscoreUrl, 'Se hvad en AIScore-rapport indeholder →')}
-    <p style="margin:24px 0 0;font-size:13px;color:#71717a;">Vi fortsætter med at sende dig AISignal hver tirsdag. Du hører fra os igen om fire dage.</p>
-    <p style="margin:12px 0 0;font-size:13px;color:#71717a;">— Teamet bag AISignal</p>`;
+    <p style="margin:24px 0 0;font-size:13px;color:#71717a;">Vi fortsætter med at sende dig InsideAI hver tirsdag. Du hører fra os igen om fire dage.</p>
+    <p style="margin:12px 0 0;font-size:13px;color:#71717a;">— Teamet bag InsideAI</p>`;
 
-  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig AISignal.', footer);
-  const text = `Hvad er din virksomheds AI-modenhedsscore?\n\n${greeting}\n\nAIScore kortlægger præcis, hvordan de store AI-modeller aktuelt opfatter og omtaler din virksomhed.\n\nSe hvad en AIScore-rapport indeholder: ${aiscoreUrl}\n\n— Teamet bag AISignal\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, 'Du modtager dette fordi du tilmeldte dig InsideAI.', footer);
+  const text = `Hvad er din virksomheds AI-modenhedsscore?\n\n${greeting}\n\nAIScore kortlægger præcis, hvordan de store AI-modeller aktuelt opfatter og omtaler din virksomhed.\n\nSe hvad en AIScore-rapport indeholder: ${aiscoreUrl}\n\n— Teamet bag InsideAI\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });
@@ -1094,12 +1094,12 @@ export async function sendEmailChangeVerificationEmail(
   }
 
   const confirmUrl = `${BASE_URL()}/api/subscribers/manage/confirm?token=${encodeURIComponent(emailChangeToken)}`;
-  const subject = `Bekræft din nye email-adresse — AISignal`;
+  const subject = `Bekræft din nye email-adresse — InsideAI`;
 
   const body = `
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Bekræft din nye email-adresse</h1>
     <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-      Du har bedt om at ændre din AISignal-email for <strong style="color:#d4d4d8;">${companyName}</strong> til denne adresse.
+      Du har bedt om at ændre din InsideAI-email for <strong style="color:#d4d4d8;">${companyName}</strong> til denne adresse.
     </p>
     <p style="margin:0 0 24px;font-size:14px;color:#71717a;line-height:1.6;">
       Klik på knappen herunder for at bekræfte. Linket er gyldigt i 24 timer.
@@ -1109,8 +1109,8 @@ export async function sendEmailChangeVerificationEmail(
       Har du ikke bedt om denne ændring? Se bort fra denne email — din nuværende adresse fortsætter uændret.
     </p>`;
 
-  const html = emailWrapper(subject, body, '© 2026 AISignal · AI-synlighedsmonitorering');
-  const text = `Bekræft din nye email-adresse — AISignal\n\nDu har bedt om at ændre din AISignal-email for ${companyName} til denne adresse.\n\nKlik her for at bekræfte (gyldigt i 24 timer):\n${confirmUrl}\n\nHar du ikke bedt om denne ændring? Se bort fra denne email.\n\n© 2026 AISignal`;
+  const html = emailWrapper(subject, body, '© 2026 InsideAI · AI-synlighedsmonitorering');
+  const text = `Bekræft din nye email-adresse — InsideAI\n\nDu har bedt om at ændre din InsideAI-email for ${companyName} til denne adresse.\n\nKlik her for at bekræfte (gyldigt i 24 timer):\n${confirmUrl}\n\nHar du ikke bedt om denne ændring? Se bort fra denne email.\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: newEmail, subject, html, text });
@@ -1132,7 +1132,7 @@ export async function sendSubscriptionCancelledEmail(
   }
 
   const dashboardUrl = `${BASE_URL()}/dashboard/${companyId}`;
-  const subject = `Dit AISignal-abonnement er annulleret — ${companyName}`;
+  const subject = `Dit InsideAI-abonnement er annulleret — ${companyName}`;
 
   const body = `
     <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Abonnement annulleret</h1>
@@ -1151,7 +1151,7 @@ export async function sendSubscriptionCancelledEmail(
     ${ctaButton(dashboardUrl, 'Gå til dashboard →')}`;
 
   const html = emailWrapper(subject, body, `Bekræftelse sendt til ${toEmail}.`);
-  const text = `Abonnement annulleret — ${companyName}\n\nDit AISignal-abonnement er nu annulleret. Din konto er skiftet til gratis-planen.\n\nHvad kunne vi have gjort bedre? Svar direkte på denne email.\n\nGenopret abonnement: ${dashboardUrl}\n\n© 2026 AISignal`;
+  const text = `Abonnement annulleret — ${companyName}\n\nDit InsideAI-abonnement er nu annulleret. Din konto er skiftet til gratis-planen.\n\nHvad kunne vi have gjort bedre? Svar direkte på denne email.\n\nGenopret abonnement: ${dashboardUrl}\n\n© 2026 InsideAI`;
 
   try {
     await resend.emails.send({ from: FROM_EMAIL, to: toEmail, subject, html, text });

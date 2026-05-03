@@ -45,7 +45,7 @@ function LoginForm() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <a href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center text-xs font-bold">AI</div>
-            <span className="font-semibold text-white tracking-tight">AISignal</span>
+            <span className="font-semibold text-white tracking-tight">InsideAI</span>
           </a>
           <span className="text-xs text-zinc-500">Log ind på din konto</span>
         </div>

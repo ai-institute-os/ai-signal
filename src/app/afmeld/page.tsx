@@ -68,7 +68,7 @@ function AfmeldContent() {
           <div style={{ background: 'linear-gradient(135deg, #00D4FF, #0099BB)', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <span style={{ color: '#0A1628', fontWeight: 800, fontSize: 13 }}>AI</span>
           </div>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17, letterSpacing: '-0.4px' }}>AISignal</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17, letterSpacing: '-0.4px' }}>InsideAI</span>
         </div>
 
         {/* Card */}
@@ -85,10 +85,10 @@ function AfmeldContent() {
               <>
                 <p style={{ margin: '0 0 6px', fontSize: 11, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>Afmelding</p>
                 <h1 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 800, color: '#F0F6FF', lineHeight: 1.25, letterSpacing: '-0.5px' }}>
-                  Afmeld AISignal-alerts
+                  Afmeld InsideAI-alerts
                 </h1>
                 <p style={{ margin: '0 0 28px', fontSize: 14, color: '#94A3B8', lineHeight: 1.6 }}>
-                  Du er ved at afmelde alerts for <strong style={{ color: '#E2E8F0' }}>{info.name}</strong> ({info.email}). Du modtager ikke flere emails fra AISignal.
+                  Du er ved at afmelde alerts for <strong style={{ color: '#E2E8F0' }}>{info.name}</strong> ({info.email}). Du modtager ikke flere emails fra InsideAI.
                 </p>
 
                 <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '14px 18px', marginBottom: 28 }}>
@@ -116,7 +116,7 @@ function AfmeldContent() {
                 <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 28 }}>✓</div>
                 <h1 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 800, color: '#F0F6FF' }}>Du er afmeldt</h1>
                 <p style={{ margin: '0 0 24px', fontSize: 14, color: '#94A3B8', lineHeight: 1.6 }}>
-                  Du modtager ikke længere AISignal-alerts. Vi har sendt en bekræftelse til din email.
+                  Du modtager ikke længere InsideAI-alerts. Vi har sendt en bekræftelse til din email.
                 </p>
                 <a
                   href={`/preferences?token=${encodeURIComponent(token || '')}`}
@@ -132,7 +132,7 @@ function AfmeldContent() {
                 <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 28 }}>ℹ</div>
                 <h1 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 800, color: '#F0F6FF' }}>Allerede afmeldt</h1>
                 <p style={{ margin: '0 0 24px', fontSize: 14, color: '#94A3B8', lineHeight: 1.6 }}>
-                  Din konto er allerede afmeldt AISignal-alerts.
+                  Din konto er allerede afmeldt InsideAI-alerts.
                 </p>
                 <a
                   href={`/preferences?token=${encodeURIComponent(token || '')}`}
@@ -154,7 +154,7 @@ function AfmeldContent() {
         </div>
 
         <p style={{ marginTop: 24, textAlign: 'center', fontSize: 11, color: '#2A3F5A' }}>
-          © 2026 AISignal · AI-synlighedsmonitorering
+          © 2026 InsideAI · AI-synlighedsmonitorering
         </p>
       </div>
     </div>

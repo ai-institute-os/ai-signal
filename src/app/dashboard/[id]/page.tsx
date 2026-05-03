@@ -533,7 +533,7 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center text-violet-400 text-sm font-bold">✦</div>
               <div>
-                <div className="text-sm font-semibold text-violet-300">AISignal Premium — gratis prøveperiode</div>
+                <div className="text-sm font-semibold text-violet-300">InsideAI Premium — gratis prøveperiode</div>
                 <div className="text-xs text-zinc-400 mt-0.5">
                   Du har adgang til alle premium-funktioner i <span className="text-violet-400 font-medium">{company.trialDaysLeft} dage</span> som tak for dit AIScore-køb.
                   Herefter aktiveres automatisk betaling.
@@ -816,12 +816,12 @@ export default function DashboardPage({ params }: { params: Promise<{ id: string
             <div className="flex items-center gap-4 text-xs text-[#888898]">
               <span className="font-medium text-[#e8e8f0]">AI-familien</span>
               <a href="https://aiscore.dk" className="hover:text-[#a78bfa] transition-colors">AIScore</a>
-              <a href="https://aisignal.dk" className="hover:text-[#a78bfa] transition-colors">AISignal</a>
+              <a href="https://aisignal.dk" className="hover:text-[#a78bfa] transition-colors">InsideAI</a>
               <a href="https://aiselect.dk" className="hover:text-[#a78bfa] transition-colors">AISelect</a>
             </div>
           </div>
           <div className="border-t border-[#2a2a3a] pt-4">
-            <p className="text-xs text-[#888898]">© 2026 AI Institute ApS · CVR 44690615 · AISignal™ er et varemærke tilhørende AI Institute ApS</p>
+            <p className="text-xs text-[#888898]">© 2026 AI Institute ApS · CVR 44690615 · InsideAI™ er et varemærke tilhørende AI Institute ApS</p>
           </div>
         </div>
       </footer>

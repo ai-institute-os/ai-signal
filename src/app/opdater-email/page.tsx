@@ -91,7 +91,7 @@ function OpdaterEmailContent() {
           <div style={{ background: 'linear-gradient(135deg, #00D4FF, #0099BB)', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <span style={{ color: '#0A1628', fontWeight: 800, fontSize: 13 }}>AI</span>
           </div>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17, letterSpacing: '-0.4px' }}>AISignal</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17, letterSpacing: '-0.4px' }}>InsideAI</span>
         </div>
 
         {/* Card */}
@@ -200,7 +200,7 @@ function OpdaterEmailContent() {
         </div>
 
         <p style={{ marginTop: 24, textAlign: 'center', fontSize: 11, color: '#2A3F5A' }}>
-          © 2026 AISignal · AI-synlighedsmonitorering
+          © 2026 InsideAI · AI-synlighedsmonitorering
         </p>
       </div>
     </div>

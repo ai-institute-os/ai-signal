@@ -85,7 +85,7 @@ function layout(content: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administrer abonnement — AISignal</title>
+  <title>Administrer abonnement — InsideAI</title>
 </head>
 <body style="margin:0;padding:0;background:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#09090b;padding:80px 20px;">
@@ -100,7 +100,7 @@ function layout(content: string): string {
                     <span style="color:#fff;font-weight:700;font-size:12px;">AI</span>
                   </td>
                   <td style="padding-left:8px;">
-                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">AISignal</span>
+                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">InsideAI</span>
                   </td>
                 </tr>
               </table>
@@ -113,7 +113,7 @@ function layout(content: string): string {
           </tr>
           <tr>
             <td style="padding-top:24px;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#3f3f46;">© 2026 AISignal · AI-synlighedsmonitorering</p>
+              <p style="margin:0;font-size:11px;color:#3f3f46;">© 2026 InsideAI · AI-synlighedsmonitorering</p>
             </td>
           </tr>
         </table>

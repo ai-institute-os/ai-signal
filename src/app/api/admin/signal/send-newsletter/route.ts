@@ -58,7 +58,7 @@ function buildNewsletterHtml(subject: string, body: string): string {
           <tr>
             <td style="padding-top:8px;border-top:1px solid #1E2A3A;">
               <p style="margin:20px 0 0 0;font-size:12px;color:#4A5568;text-align:center;">
-                Du modtager dette nyhedsbrev fordi du har tilmeldt dig AISignal.<br>
+                Du modtager dette nyhedsbrev fordi du har tilmeldt dig InsideAI.<br>
                 <a href="https://aisignal.dk" style="color:#00D4FF;text-decoration:none;">aisignal.dk</a>
                 &nbsp;·&nbsp;
                 <a href="https://aisignal.dk/afmeld" style="color:#4A5568;text-decoration:none;">Afmeld</a>
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   }
 
   const html = buildNewsletterHtml(subject, body);
-  const from = 'AISignal <signal@aiscore.dk>';
+  const from = 'InsideAI <signal@aiscore.dk>';
 
   let sent = 0;
   let failed = 0;

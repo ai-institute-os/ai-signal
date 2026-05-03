@@ -89,7 +89,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-8 text-center">
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Læs hele artiklen</h2>
                 <p className="text-gray-500 mb-6 text-sm">
-                  Opret en gratis konto for at læse alle AISignal-artikler og holde dig opdateret på AI i Danmark.
+                  Opret en gratis konto for at læse alle InsideAI-artikler og holde dig opdateret på AI i Danmark.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Link

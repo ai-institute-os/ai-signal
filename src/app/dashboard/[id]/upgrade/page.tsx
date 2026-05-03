@@ -63,7 +63,7 @@ const PLANS = [
     priceSub: '/ måned',
     color: 'blue',
     badge: 'Fuld suite',
-    description: 'AISignal + AIScore + AISelect. Strategisk analyse og løbende positionering.',
+    description: 'InsideAI + AIScore + AISelect. Strategisk analyse og løbende positionering.',
     features: [
       'Alt i Mellem',
       'AIScore strategisk analyse (engangs)',
@@ -179,7 +179,7 @@ export default function UpgradePage({ params }: { params: Promise<{ id: string }
           <div className="flex items-center gap-3">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80">
               <div className="w-7 h-7 rounded-md bg-violet-500 flex items-center justify-center text-xs font-bold">AI</div>
-              <span className="font-semibold tracking-tight">AISignal</span>
+              <span className="font-semibold tracking-tight">InsideAI</span>
             </button>
             <span className="text-zinc-600">/</span>
             <button onClick={() => router.push(`/dashboard/${id}`)} className="text-sm text-zinc-300 hover:text-white">

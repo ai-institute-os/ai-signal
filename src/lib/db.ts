@@ -100,7 +100,7 @@ async function initSchema(db: Client): Promise<void> {
       excerpt TEXT NOT NULL,
       content TEXT NOT NULL,
       tags TEXT NOT NULL DEFAULT '[]',
-      author TEXT NOT NULL DEFAULT 'AISignal',
+      author TEXT NOT NULL DEFAULT 'InsideAI',
       status TEXT NOT NULL DEFAULT 'published',
       published_at TEXT NOT NULL DEFAULT (datetime('now')),
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -815,7 +815,7 @@ function parseArticleRow(row: Record<string, unknown>): Article {
     excerpt: row.excerpt as string,
     content: row.content as string,
     tags: JSON.parse((row.tags as string) || '[]'),
-    author: (row.author as string) || 'AISignal',
+    author: (row.author as string) || 'InsideAI',
     status: (row.status as 'draft' | 'published') || 'published',
     published_at: row.published_at as string,
     created_at: row.created_at as string,

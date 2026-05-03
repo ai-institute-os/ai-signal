@@ -82,7 +82,7 @@ function PreferencesContent() {
   }
 
   async function doUnsubscribe() {
-    if (!token || !confirm('Er du sikker på, at du vil afmelde alle AISignal-emails?')) return;
+    if (!token || !confirm('Er du sikker på, at du vil afmelde alle InsideAI-emails?')) return;
     setSaveState('saving');
     const res = await fetch(`/api/preferences/update?token=${encodeURIComponent(token)}`, {
       method: 'POST',
@@ -139,7 +139,7 @@ function PreferencesContent() {
           </div>
           <h1 className="font-bold text-xl mb-2 text-white">Du er afmeldt</h1>
           <p className="text-sm" style={{ color: '#8BA3C7' }}>
-            Du modtager ikke længere emails fra AISignal.
+            Du modtager ikke længere emails fra InsideAI.
           </p>
         </div>
       </div>
@@ -155,7 +155,7 @@ function PreferencesContent() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm" style={{ backgroundColor: CYAN, color: NAVY }}>
             AI
           </div>
-          <span className="font-semibold text-white text-base">AISignal</span>
+          <span className="font-semibold text-white text-base">InsideAI</span>
         </div>
 
         <h1 className="font-bold text-2xl text-white mb-1">Email-præferencer</h1>
@@ -267,7 +267,7 @@ function PreferencesContent() {
             Afmelding
           </p>
           <p className="text-xs mb-3" style={{ color: '#4A6B8A' }}>
-            Afmeld alle AISignal-emails permanent. Du kan altid melde dig til igen via aisignal.dk.
+            Afmeld alle InsideAI-emails permanent. Du kan altid melde dig til igen via aisignal.dk.
           </p>
           <button
             onClick={doUnsubscribe}
@@ -288,7 +288,7 @@ function PreferencesContent() {
         </div>
 
         <p className="text-xs text-center" style={{ color: '#2A4A6B' }}>
-          © 2026 AISignal · AI-synlighedsmonitorering
+          © 2026 InsideAI · AI-synlighedsmonitorering
         </p>
       </div>
     </div>

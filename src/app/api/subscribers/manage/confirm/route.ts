@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   await updateCompany(company.id, { email: newEmail });
 
-  return htmlResponse(resultPage(true, 'Email-adresse opdateret', `Din AISignal-email for ${escapeHtml(company.name)} er nu ændret til ${escapeHtml(newEmail)}. Fremtidige alerts sendes til den nye adresse.`));
+  return htmlResponse(resultPage(true, 'Email-adresse opdateret', `Din InsideAI-email for ${escapeHtml(company.name)} er nu ændret til ${escapeHtml(newEmail)}. Fremtidige alerts sendes til den nye adresse.`));
 }
 
 function htmlResponse(html: string, status = 200): NextResponse {
@@ -44,7 +44,7 @@ function resultPage(success: boolean, title: string, message: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)} — AISignal</title>
+  <title>${escapeHtml(title)} — InsideAI</title>
 </head>
 <body style="margin:0;padding:0;background:#09090b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#09090b;padding:80px 20px;">
@@ -59,7 +59,7 @@ function resultPage(success: boolean, title: string, message: string): string {
                     <span style="color:#fff;font-weight:700;font-size:12px;">AI</span>
                   </td>
                   <td style="padding-left:8px;">
-                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">AISignal</span>
+                    <span style="color:#fff;font-weight:600;font-size:16px;letter-spacing:-0.3px;">InsideAI</span>
                   </td>
                 </tr>
               </table>
@@ -76,7 +76,7 @@ function resultPage(success: boolean, title: string, message: string): string {
           </tr>
           <tr>
             <td style="padding-top:24px;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#3f3f46;">© 2026 AISignal · AI-synlighedsmonitorering</p>
+              <p style="margin:0;font-size:11px;color:#3f3f46;">© 2026 InsideAI · AI-synlighedsmonitorering</p>
             </td>
           </tr>
         </table>

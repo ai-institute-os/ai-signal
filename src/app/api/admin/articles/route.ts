@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     excerpt: (excerpt ?? '').trim(),
     content: content.trim(),
     tags: Array.isArray(tags) ? tags : [],
-    author: author?.trim() || 'AISignal',
+    author: author?.trim() || 'InsideAI',
     status: status === 'draft' ? 'draft' : 'published',
     published_at: published_at || new Date().toISOString(),
   });

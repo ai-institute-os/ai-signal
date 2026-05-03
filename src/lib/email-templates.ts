@@ -92,7 +92,7 @@ export function weeklyReportEmail(data: WeeklyReportData): string {
 
     <!-- Closing -->
     <p style="margin:0;font-size:12px;color:#2A3F5A;line-height:1.7;">
-      AISignal observerer og rapporterer — alle beslutninger er dine.<br>
+      InsideAI observerer og rapporterer — alle beslutninger er dine.<br>
       <a href="${unsubscribeLink}" style="color:#4A6080;text-decoration:none;">Afmeld nyhedsbrev</a>
     </p>`;
 
@@ -101,7 +101,7 @@ export function weeklyReportEmail(data: WeeklyReportData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ugentlig AI-opdatering — AISignal</title>
+  <title>Ugentlig AI-opdatering — InsideAI</title>
 </head>
 <body style="margin:0;padding:0;background:#060D1A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#060D1A;padding:40px 20px;">
@@ -121,7 +121,7 @@ export function weeklyReportEmail(data: WeeklyReportData): string {
                           <span style="color:#0A1628;font-weight:800;font-size:13px;">AI</span>
                         </td>
                         <td style="padding-left:10px;">
-                          <span style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-0.4px;">AISignal</span>
+                          <span style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-0.4px;">InsideAI</span>
                         </td>
                       </tr>
                     </table>
@@ -157,8 +157,8 @@ export function weeklyReportEmail(data: WeeklyReportData): string {
           <tr>
             <td style="padding-top:24px;text-align:center;">
               <p style="margin:0;font-size:11px;color:#2A3F5A;line-height:1.8;">
-                Du modtager dette nyhedsbrev fordi du er tilmeldt AISignal.<br>
-                © 2026 AISignal · AI-synlighedsmonitorering
+                Du modtager dette nyhedsbrev fordi du er tilmeldt InsideAI.<br>
+                © 2026 InsideAI · AI-synlighedsmonitorering
               </p>
             </td>
           </tr>

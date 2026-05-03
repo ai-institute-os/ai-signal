@@ -7,7 +7,7 @@ export default function TilmeldtPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-[#00D4FF] to-[#0099BB]">
             <span className="text-[#0A1628] font-extrabold text-[13px]">AI</span>
           </div>
-          <span className="text-white font-bold text-[17px] tracking-tight">AISignal</span>
+          <span className="text-white font-bold text-[17px] tracking-tight">InsideAI</span>
         </div>
 
         {/* Card */}
@@ -36,7 +36,7 @@ export default function TilmeldtPage() {
 
             {/* Heading */}
             <h1 className="text-center text-[22px] font-extrabold text-[#F0F6FF] tracking-tight leading-tight mb-3">
-              Du er tilmeldt AISignal
+              Du er tilmeldt InsideAI
             </h1>
 
             {/* Subtext */}
@@ -44,13 +44,13 @@ export default function TilmeldtPage() {
               Du modtager snart din velkomst-email med din første AI-indsigt.
             </p>
 
-            {/* What is AISignal block */}
+            {/* What is InsideAI block */}
             <div className="bg-[rgba(0,212,255,0.06)] border border-[rgba(0,212,255,0.15)] rounded-xl px-5 py-4 mb-8">
               <p className="text-[11px] font-semibold text-[#00D4FF] uppercase tracking-[0.7px] mb-1.5">
-                Hvad er AISignal?
+                Hvad er InsideAI?
               </p>
               <p className="text-[13px] text-[#94A3B8] leading-relaxed m-0">
-                AISignal leverer ugentlige indsigter om, hvad kunstig intelligens siger om din
+                InsideAI leverer ugentlige indsigter om, hvad kunstig intelligens siger om din
                 branche og dine konkurrenter — direkte i din indbakke, uden login.
               </p>
             </div>
@@ -67,7 +67,7 @@ export default function TilmeldtPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-[11px] text-[#2A3F5A]">
-          © 2026 AISignal · AI-synlighedsmonitorering
+          © 2026 InsideAI · AI-synlighedsmonitorering
         </p>
       </div>
     </div>
