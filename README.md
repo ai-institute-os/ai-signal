@@ -1,6 +1,6 @@
-# AISignal
+# InsideAI
 
-Continuous AI monitoring platform that tracks how your company is perceived and recommended by AI systems (ChatGPT, Gemini, Perplexity). Sends weekly alert digests when your AI visibility changes.
+Self-serve AI monitoring platform. Track how your company is perceived and recommended by AI systems (ChatGPT, Gemini, Perplexity). Get weekly alert digests when your AI visibility changes.
 
 ## Table of Contents
 
@@ -63,8 +63,8 @@ Monitoring runs all configured providers in parallel. A failure in one provider 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `RESEND_API_KEY` | — | Resend API key (`re_...`). Get from [resend.com/api-keys](https://resend.com/api-keys). |
-| `RESEND_FROM_EMAIL` | `AISignal <alerts@aisignal.dk>` | Sender address. Must be a verified Resend domain. |
-| `NEXT_PUBLIC_BASE_URL` | `https://aisignal.dk` | Base URL used in email links (unsubscribe, preferences, dashboard). |
+| `RESEND_FROM_EMAIL` | `InsideAI <alerts@insideai.dk>` | Sender address. Must be a verified Resend domain. |
+| `NEXT_PUBLIC_BASE_URL` | `https://insideai.dk` | Base URL used in email links (unsubscribe, preferences, dashboard). |
 
 ### Cron & Monitoring
 
@@ -93,7 +93,7 @@ Monitoring runs all configured providers in parallel. A failure in one provider 
 
 ## Database Setup
 
-AISignal uses [Turso](https://turso.tech) (LibSQL/SQLite-compatible) as its database. The schema bootstraps automatically on first request — no migration CLI required.
+InsideAI uses [Turso](https://turso.tech) (LibSQL/SQLite-compatible) as its database. The schema bootstraps automatically on first request — no migration CLI required.
 
 ### 1. Create a Turso database
 
@@ -105,13 +105,13 @@ curl -sSfL https://get.tur.so/install.sh | bash
 turso auth login
 
 # Create a database
-turso db create aisignal
+turso db create insideai
 
 # Get the connection URL
-turso db show aisignal --url
+turso db show insideai --url
 
 # Create an auth token
-turso db tokens create aisignal
+turso db tokens create insideai
 ```
 
 ### 2. Set environment variables
@@ -119,7 +119,7 @@ turso db tokens create aisignal
 Add the URL and token to `.env.local`:
 
 ```env
-TURSO_DATABASE_URL=libsql://aisignal-yourname.turso.io
+TURSO_DATABASE_URL=libsql://insideai-yourname.turso.io
 TURSO_AUTH_TOKEN=<token from step above>
 ```
 
@@ -268,7 +268,7 @@ Vercel injects `CRON_SECRET` automatically. For other platforms or local testing
 
 ### `POST /api/admin/aiscore-activate`
 
-Activates a company's AISignal premium trial. Called by AIScore after a company purchases an AI report.
+Activates a company's InsideAI premium trial. Called by AIScore after a company purchases an AI report.
 
 **Auth:** `Authorization: Bearer <ADMIN_SECRET>`
 
